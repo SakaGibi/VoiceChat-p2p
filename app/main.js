@@ -7,8 +7,11 @@ function createWindow() {
         height: 900,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false
+            // KRİTİK AYARLAR BURADA:
+            sandbox: false,
+            nodeIntegration: false, // Güvenlik için kapalı kalsın
+            contextIsolation: false, // Preload'ın window'a erişmesi için KAPALI (false) olmalı
+            enableRemoteModule: false
         }
     });
 

@@ -1,3 +1,8 @@
+// --- YENİ EKLENEN KISIM (BAŞLANGIÇ) ---
+const SimplePeer = require('simple-peer');
+window.SimplePeer = SimplePeer; // HTML tarafına aktarıyoruz
+// --- YENİ EKLENEN KISIM (BİTİŞ) ---
+
 const { contextBridge } = require("electron");
 
 let audioContext;
