@@ -3,6 +3,7 @@ const { contextBridge } = require('electron');
 let audioContext;
 let analyser;
 let source;
+let micStream;
 
 contextBridge.exposeInMainWorld('electronAPI', {
     getUserName: async () => {
@@ -12,13 +13,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 contextBridge.exposeInMainWorld('audioAPI', {
     startMicTest: async () => {
+        if (micStream) return; // Zaten açıksa yeniden açma
         console.log("🟦 Preload: Mikrofon testi başlatılıyor...");
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log("🎤 Preload: Mikrofon stream hazır");
 
             audioContext = new AudioContext();
-            source = audioContext.createMediaStreamSource(stream);
+            source = audioContext.createMediaStreamSource(micStream);
 
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 256;
@@ -30,6 +32,23 @@ contextBridge.exposeInMainWorld('audioAPI', {
         } catch (err) {
             console.error("❌ Preload: Mikrofon alınamadı:", err);
         }
+    },
+
+    stopMicTest: () => {
+        if (!micStream) return;
+
+        console.log("🟡 Preload: Mikrofon testi durduruluyor...");
+        source.disconnect();
+        analyser.disconnect();
+
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+        source = null;
+        analyser = null;
+        audioContext.close();
+        audioContext = null;
+
+        console.log("🔴 Preload: Mikrofon kapatıldı.");
     },
 
     getAudioData: () => {
