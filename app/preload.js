@@ -1,60 +1,49 @@
-const { contextBridge } = require('electron');
+const { contextBridge } = require("electron");
 
 let audioContext;
 let analyser;
 let source;
-let micStream;
+let microphoneStream;
 
-contextBridge.exposeInMainWorld('electronAPI', {
-    getUserName: async () => {
-        return prompt("Lütfen adını gir:");
-    }
-});
-
-contextBridge.exposeInMainWorld('audioAPI', {
+contextBridge.exposeInMainWorld("audioAPI", {
     startMicTest: async () => {
-        if (micStream) return; // Zaten açıksa yeniden açma
         console.log("🟦 Preload: Mikrofon testi başlatılıyor...");
-        try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("🎤 Preload: Mikrofon stream hazır");
+        if (!audioContext) audioContext = new AudioContext();
 
-            audioContext = new AudioContext();
-            source = audioContext.createMediaStreamSource(micStream);
+        microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("🎤 Preload: Mikrofon stream hazır");
 
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
+        source = audioContext.createMediaStreamSource(microphoneStream);
 
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
 
-            console.log("🟢 Preload: Mikrofon sesi hoparlöre yönlendirildi.");
-        } catch (err) {
-            console.error("❌ Preload: Mikrofon alınamadı:", err);
+        console.log("🟢 Preload: Mikrofon sesi hoparlöre yönlendirildi");
+    },
+
+    stopMicTest: async () => {
+        if (microphoneStream) {
+            microphoneStream.getTracks().forEach(track => track.stop());
+            microphoneStream = null;
         }
+        if (source) source.disconnect();
+        if (analyser) analyser.disconnect();
+        console.log("🔴 Preload: Mikrofon testi durduruldu");
     },
 
-    stopMicTest: () => {
-        if (!micStream) return;
-
-        console.log("🟡 Preload: Mikrofon testi durduruluyor...");
-        source.disconnect();
-        analyser.disconnect();
-
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-        source = null;
-        analyser = null;
-        audioContext.close();
-        audioContext = null;
-
-        console.log("🔴 Preload: Mikrofon kapatıldı.");
-    },
-
-    getAudioData: () => {
-        if (!analyser) return null;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    getAudioLevel: () => {
+        if (!analyser) return 0;
+        const dataArray = new Uint8Array(analyser.fftSize);
         analyser.getByteTimeDomainData(dataArray);
-        return dataArray;
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            const v = (dataArray[i] - 128) / 128;
+            sum += v * v;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        return rms;
     }
 });
