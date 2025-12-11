@@ -1,6 +1,5 @@
-/* app/main.css - VARSAYILAN KARANLIK TEMA */
+/* app/main.css - KOMPAKT & SCROLL FIX */
 
-/* 1. VARSAYILAN (KARANLIK) TEMA DEĞİŞKENLERİ */
 :root {
     --bg-body: #121212;
     --bg-container: #1e1e1e;
@@ -23,14 +22,12 @@
     --btn-primary-hover: #1976D2;
     --btn-text: #ffffff;
     
-    /* Kullanıcı kartı durum renkleri (Bağlı/Bağlanıyor) */
-    --user-connected: #1b5e20; /* Koyu yeşil */
-    --user-connecting: #4a3b0a; /* Koyu turuncu */
+    --user-connected: #1b5e20;
+    --user-connecting: #4a3b0a;
 }
 
-/* 2. AYDINLIK (LIGHT) TEMA TANIMLAMALARI */
 body.light-theme {
-    --bg-body: #f5f5f5;
+    --bg-body: #f0f0f0;
     --bg-container: #ffffff;
     --text-main: #333333;
     --text-muted: #666666;
@@ -51,201 +48,137 @@ body.light-theme {
     --user-connecting: #fff3e0;
 }
 
-/* 3. GENEL STİLLER */
+/* GENEL DÜZEN (SCROLL FIX BURADA) */
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    padding: 20px; 
+    margin: 0;
+    padding: 0;
     background: var(--bg-body); 
     color: var(--text-main); 
-    transition: background 0.3s, color 0.3s;
+    height: 100vh; /* Ekranı tam kapla */
+    overflow: hidden; /* Ana sayfa asla kaymasın */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .container { 
-    max-width: 700px; 
-    margin: 0 auto; 
+    width: 100%;
+    height: 100vh; /* Tam yükseklik */
+    max-width: 100%; /* Genişlik kısıtlamasını main.js'ten yapacağız */
     background: var(--bg-container); 
-    padding: 25px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-    transition: background 0.3s;
+    display: flex;
+    flex-direction: column; /* Dikey dizilim */
+    padding: 15px;
+    box-sizing: border-box;
 }
 
-/* Başlık Alanı Düzeni */
+/* ÜST KISIMLAR (SABİT) */
 .header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    flex-shrink: 0; /* Küçülmesine izin verme */
 }
 
-h1 { 
-    margin: 0; 
-    color: var(--text-main); 
-    font-size: 24px; 
-}
+h1 { margin: 0; font-size: 20px; }
 
-/* Tema Butonu */
 #btnTheme {
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-main);
-    padding: 5px 10px;
-    font-size: 18px;
     cursor: pointer;
     border-radius: 50%;
-    transition: 0.3s;
+    
+    /* YENİ EKLENEN KRİTİK SATIRLAR */
+    flex: none;        /* Flex 1 özelliğini iptal et (Uzamayı engeller) */
+    -webkit-app-region: no-drag; /* Sürüklemeyi engelle (Windows barındaysa) */
+    
+    /* BOYUT AYARLARI */
+    width: 32px;       /* Genişlik */
+    height: 32px;      /* Yükseklik */
+    padding: 0;        /* İç boşluğu sıfırla */
+    min-width: 32px;   /* Asla 32px'den küçük olma */
+    
+    /* MERKEZLEME */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    font-size: 16px;
+    transition: all 0.2s;
+    margin-left: 10px; /* Başlıktan biraz uzaklaşsın */
 }
+
 #btnTheme:hover {
     background: var(--border-color);
+    transform: scale(1.1);
 }
 
 #status { 
-    padding: 12px; 
-    margin-bottom: 20px; 
-    border-radius: 6px; 
-    background: var(--status-bg); 
-    color: var(--status-text); 
-    font-weight: 600; 
-    text-align: center; 
+    padding: 8px; margin-bottom: 10px; border-radius: 6px; 
+    background: var(--status-bg); color: var(--status-text); 
+    font-size: 13px; font-weight: 600; text-align: center;
+    flex-shrink: 0;
 }
 
-.input-group { 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 20px; 
-    justify-content: center; 
-}
-
+.input-group { margin-bottom: 10px; flex-shrink: 0; }
 input[type="text"] { 
-    padding: 10px 15px; 
-    border: 2px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--text-main);
-    border-radius: 6px; 
-    width: 60%; 
-    font-size: 16px; 
-    outline: none; 
-    transition: 0.3s; 
+    padding: 8px; width: 100%; box-sizing: border-box;
+    border: 1px solid var(--input-border); background: var(--input-bg);
+    color: var(--text-main); border-radius: 6px; outline: none;
 }
 
-input[type="text"]:focus { 
-    border-color: var(--btn-primary); 
-}
-
-.controls { 
-    display: flex; 
-    gap: 10px; 
-    justify-content: center; 
-    margin-bottom: 20px; 
-    flex-wrap: wrap;
-}
-
-button { 
-    padding: 10px 20px; 
-    cursor: pointer; 
-    border: none; 
-    border-radius: 6px; 
-    font-size: 14px; 
-    font-weight: 600; 
-    transition: 0.2s; 
-    display: flex; 
-    align-items: center; 
-    gap: 5px; 
-    color: var(--btn-text);
-}
-
-button:disabled { 
-    opacity: 0.6; 
-    cursor: not-allowed; 
-}
-
-#btnConnect { 
-    background: var(--btn-primary); 
-    width: 100%; 
-    justify-content: center; 
-}
-
-#btnConnect:hover:not(:disabled) { 
-    background: var(--btn-primary-hover); 
-}
-
-.audio-controls { 
-    display: none; 
-    gap: 10px; 
-    width: 100%; 
-    justify-content: center; 
-}
-
-#btnToggleMic, #btnToggleSound { 
-    background: #2ecc71; 
-    flex: 1; 
-    justify-content: center; 
-} 
-
-.user-card { 
-    background: var(--card-bg); 
-    padding: 15px; 
-    margin-bottom: 10px; 
-    border-radius: 8px; 
-    border: 1px solid var(--border-color); 
-    display: flex; 
-    flex-direction: column; 
-    box-shadow: 0 2px 5px var(--card-shadow);
-}
-
-.user-info { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 8px; 
-}
-
-.user-name { 
-    font-weight: bold; 
-    font-size: 16px; 
-    color: var(--text-main);
-}
-
-.user-status { 
-    font-size: 13px; 
-    padding: 4px 8px; 
-    border-radius: 12px; 
-    background: var(--border-color); 
-    color: var(--text-muted);
-}
-
-.meter-bg { 
-    width: 100%; 
-    height: 6px; 
-    background: var(--border-color); 
-    border-radius: 3px; 
-    overflow: hidden; 
-}
-
-.meter-fill { 
-    height: 100%; 
-    width: 0%; 
-    background: #2ecc71; 
-    transition: width 0.05s ease-out; 
-}
-
-#error-log { 
-    color: #c0392b; 
-    font-size: 12px; 
-    margin-top: 10px; 
-    white-space: pre-wrap; 
-    text-align: center; 
-}
-
-/* Slider Alanı */
+/* AYARLAR PANELİ (SABİT) */
 #settingsPanel {
     background: var(--settings-bg) !important;
     border: 1px solid var(--border-color) !important;
+    padding: 10px; border-radius: 8px; margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
-.slider-group label {
-    color: var(--text-main);
+.controls { 
+    display: flex; gap: 5px; margin-bottom: 10px; flex-shrink: 0; 
 }
-.user-volume label {
-    color: var(--text-main);
+
+button { 
+    padding: 8px; cursor: pointer; border: none; border-radius: 6px; 
+    font-size: 13px; font-weight: 600; color: var(--btn-text); flex: 1;
 }
+#btnConnect { background: var(--btn-primary); }
+#btnDisconnect { background: #f44336; display: none; }
+#btnToggleMic, #btnToggleSound { background: #2ecc71; } 
+
+.audio-controls { display: none; gap: 5px; width: 100%; }
+
+/* ALT KISIM (KAYDIRILABİLİR LİSTE) */
+#users {
+    flex: 1; /* Kalan tüm boşluğu kapla */
+    overflow-y: auto; /* Sadece burası kaysın */
+    margin-top: 5px;
+    padding-right: 5px; /* Scrollbar için boşluk */
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+/* Scrollbar Tasarımı */
+#users::-webkit-scrollbar { width: 6px; }
+#users::-webkit-scrollbar-track { background: transparent; }
+#users::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+#users::-webkit-scrollbar-thumb:hover { background: #777; }
+
+/* KART TASARIMLARI */
+.user-card { 
+    background: var(--card-bg); padding: 10px; margin-bottom: 8px; 
+    border-radius: 6px; border: 1px solid var(--border-color); 
+}
+.user-info { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+.meter-bg { width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; }
+.meter-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.05s; }
+
+/* Helper Classes */
+.slider-group { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.slider-group:last-child { margin-bottom: 0; }
+.slider-group label { font-size: 12px; width: 70px; }
+.device-select { padding: 4px; font-size: 12px; width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--input-border); }
