@@ -4,8 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' ws: blob:; style-src 'self' 'unsafe-inline';">
     <title>Electron P2P Voice Chat</title>
-    
     <link rel="stylesheet" href="main.css">
+    <style>
+        /* Slider stilleri */
+        .slider-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; width: 100%; }
+        .slider-group label { font-size: 14px; font-weight: bold; width: 100px; }
+        .slider-group input { flex: 1; cursor: pointer; }
+        .slider-val { font-size: 12px; width: 35px; text-align: right; font-family: monospace; }
+        
+        /* Kullanıcı kartındaki slider */
+        .user-volume { margin-top: 5px; display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .user-volume input { flex: 1; height: 5px; cursor: pointer; }
+        .user-volume span { font-size: 11px; width: 30px; text-align: right; color: #666; }
+    </style>
 </head>
 <body>
 
@@ -15,6 +26,19 @@
     
     <div class="input-group">
         <input type="text" id="username" placeholder="Kullanıcı Adınız" value="User">
+    </div>
+
+    <div id="settingsPanel" style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #eee; display:none;">
+        <div class="slider-group">
+            <label>🎙️ Mic Ses:</label>
+            <input type="range" id="micVolume" min="0" max="200" value="100">
+            <span id="micVal" class="slider-val">100%</span>
+        </div>
+        <div class="slider-group">
+            <label>🎧 Genel Ses:</label>
+            <input type="range" id="masterVolume" min="0" max="100" value="100">
+            <span id="masterVal" class="slider-val">100%</span>
+        </div>
     </div>
     
     <div class="controls">
@@ -36,21 +60,26 @@
 <div id="audioContainer"></div>
 
 <script>
-    // --- BAŞLANGIÇ KONTROLÜ ---
     window.onload = () => {
-        if (window.SimplePeer) console.log("✅ Sistem Hazır");
-        else document.getElementById('error-log').innerText = "HATA: SimplePeer yüklenemedi.";
+        if (!window.SimplePeer) document.getElementById('error-log').innerText = "HATA: SimplePeer yüklenemedi.";
     };
 
     const PORT = 8080;
-    const WS_URL = `wss://unraspy-intramural-marshall.ngrok-free.dev`;    
+    // DİKKAT: Ngrok kullanıyorsan burayı güncelle
+    const WS_URL = `ws://localhost:${PORT}`; 
+    
     let socket;
-    let localStream;
+    let localStream;      
+    let processedStream;  
+    let micGainNode;      
+    let audioContext;     
+
     let peers = {}; 
-    let userNames = {}; // İsimleri tutmak için
+    let userNames = {};
     let isMicMuted = false;
     let isDeafened = false;
 
+    // UI Elementleri
     const inputUsername = document.getElementById('username');
     const statusDiv = document.getElementById('status');
     const userListDiv = document.getElementById('userList');
@@ -58,31 +87,70 @@
     const btnToggleMic = document.getElementById('btnToggleMic');
     const btnToggleSound = document.getElementById('btnToggleSound');
     const audioControls = document.getElementById('audioControls');
+    const settingsPanel = document.getElementById('settingsPanel');
+    
+    // Slider Elementleri
+    const micSlider = document.getElementById('micVolume');
+    const micVal = document.getElementById('micVal');
+    const masterSlider = document.getElementById('masterVolume');
+    const masterVal = document.getElementById('masterVal');
 
     inputUsername.value += "_" + Math.floor(Math.random() * 1000);
 
-    // --- BUTON: BAĞLAN ---
+    // --- SES AYARLARI MANTIĞI ---
+    micSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        micVal.innerText = val + "%";
+        if (micGainNode) micGainNode.gain.value = val / 100; 
+    });
+
+    masterSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        masterVal.innerText = val + "%";
+        document.querySelectorAll('audio').forEach(audio => {
+            audio.volume = val / 100;
+        });
+    });
+
+    // --- BAĞLANMA İŞLEMİ ---
     btnConnect.addEventListener('click', async () => {
         const name = inputUsername.value;
         btnConnect.disabled = true;
         inputUsername.disabled = true;
         
-        statusDiv.innerText = "Mikrofon izni alınıyor...";
+        statusDiv.innerText = "Ses motoru başlatılıyor...";
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(rawStream);
+            
+            micGainNode = audioContext.createGain();
+            micGainNode.gain.value = 1.0; 
+            
+            const destination = audioContext.createMediaStreamDestination();
+            
+            source.connect(micGainNode);
+            micGainNode.connect(destination);
+            
+            localStream = rawStream; 
+            processedStream = destination.stream; 
+
             statusDiv.innerText = "Sunucuya bağlanılıyor...";
             
             btnConnect.style.display = 'none';
             audioControls.style.display = 'flex';
+            settingsPanel.style.display = 'block'; 
             
             userNames["me"] = name + " (Ben)";
             addUserUI("me", userNames["me"], true);
-            attachVisualizer(localStream, "me");
+            
+            attachVisualizer(processedStream, "me"); 
 
             connectSocket(name);
         } catch (err) {
             console.error(err);
-            statusDiv.innerText = "HATA: Mikrofon izni verilmedi!";
+            statusDiv.innerText = "HATA: " + err.message;
             btnConnect.disabled = false;
         }
     });
@@ -92,7 +160,7 @@
         if (!localStream) return;
         const track = localStream.getAudioTracks()[0];
         isMicMuted = mute;
-        track.enabled = !mute;
+        track.enabled = !mute; 
 
         if (isMicMuted) {
             btnToggleMic.innerText = "🔇 Mikrofon Kapalı";
@@ -138,7 +206,6 @@
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
                 if (data.type === 'user-list') {
                     statusDiv.innerText = `Sohbet Odası (${data.users.length + 1} Kişi)`;
                     data.users.forEach(user => {
@@ -151,15 +218,10 @@
                     userNames[data.id] = data.name;
                     updateNameUI(data.id, data.name);
                 } 
-                else if (data.type === 'signal') {
-                    handleSignal(data.senderId, data.signal);
-                }
-                else if (data.type === 'user-left') {
-                    removePeer(data.id);
-                }
+                else if (data.type === 'signal') handleSignal(data.senderId, data.signal);
+                else if (data.type === 'user-left') removePeer(data.id);
             } catch (e) { console.error(e); }
         };
-        
         socket.onerror = () => statusDiv.innerText = "Sunucu Bağlantı Hatası!";
     }
 
@@ -168,14 +230,9 @@
         try {
             const peer = new window.SimplePeer({
                 initiator: initiator,
-                stream: localStream,
+                stream: processedStream,
                 trickle: false,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
-                }
+                config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
             });
 
             peer.on('signal', signal => {
@@ -183,7 +240,6 @@
             });
 
             peer.on('stream', stream => {
-                console.log("Ses Geldi:", targetId);
                 addAudioElement(targetId, stream);
                 const finalName = userNames[targetId] || name || "Bilinmeyen";
                 addUserUI(targetId, finalName, true);
@@ -198,7 +254,6 @@
                 const finalName = userNames[targetId] || name || "Bilinmeyen";
                 addUserUI(targetId, finalName, false);
             }
-
         } catch (e) { console.error(e); }
     }
 
@@ -214,8 +269,7 @@
     function addUserUI(id, name, isConnected) {
         let el = document.getElementById(`user-${id}`);
         const statusText = isConnected ? 'Canlı' : 'Bağlanıyor...';
-        const statusColor = isConnected ? '#e8f5e9' : '#fff3e0'; 
-
+        
         if (!el) {
             el = document.createElement('div');
             el.id = `user-${id}`;
@@ -223,12 +277,30 @@
             userListDiv.appendChild(el);
         }
         
-        el.style.backgroundColor = statusColor;
+        el.style.backgroundColor = isConnected ? '#e8f5e9' : '#fff3e0';
+        
+        // KİŞİYE ÖZEL SES AYARI + YÜZDE GÖSTERGESİ
+        let volumeControlHTML = '';
+        if (id !== 'me') {
+            volumeControlHTML = `
+                <div class="user-volume">
+                    <label>🔊</label>
+                    <input type="range" min="0" max="100" value="100" 
+                           oninput="
+                               document.getElementById('audio-${id}').volume = this.value/100;
+                               document.getElementById('vol-val-${id}').innerText = this.value + '%';
+                           ">
+                    <span id="vol-val-${id}">100%</span>
+                </div>
+            `;
+        }
+
         el.innerHTML = `
             <div class="user-info">
                 <span class="user-name">${name}</span>
                 <span class="user-status">${statusText}</span>
             </div>
+            ${volumeControlHTML}
             <div class="meter-bg">
                 <div id="meter-fill-${id}" class="meter-fill"></div>
             </div>
@@ -272,6 +344,10 @@
         audio.id = `audio-${id}`;
         audio.srcObject = stream;
         audio.autoplay = true;
+        
+        const masterVol = document.getElementById('masterVolume').value;
+        audio.volume = masterVol / 100;
+
         if (isDeafened) audio.muted = true;
         document.getElementById('audioContainer').appendChild(audio);
     }
