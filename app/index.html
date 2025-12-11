@@ -9,12 +9,25 @@
     <style>
         /* Slider özel stilleri */
         .slider-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; width: 100%; }
-        .slider-group label { font-size: 14px; font-weight: bold; width: 100px; }
+        .slider-group label { font-size: 14px; font-weight: bold; width: 100px; color: var(--text-main); }
         .slider-group input { flex: 1; cursor: pointer; }
         .slider-val { font-size: 12px; width: 35px; text-align: right; font-family: monospace; color: var(--text-muted); }
+        
+        /* Kullanıcı kartı stilleri */
         .user-volume { margin-top: 5px; display: flex; align-items: center; gap: 5px; font-size: 12px; }
         .user-volume input { flex: 1; height: 5px; cursor: pointer; }
         .user-volume span { font-size: 11px; width: 30px; text-align: right; color: var(--text-muted); }
+
+        /* Dropdown (Mikrofon Seçimi) Stili */
+        .mic-select {
+            flex: 1;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-main);
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -32,6 +45,14 @@
     </div>
 
     <div id="settingsPanel" style="padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #eee;">
+        
+        <div class="slider-group" style="margin-bottom: 15px;">
+            <label>🎤 Cihaz:</label>
+            <select id="micSelect" class="mic-select">
+                <option value="">Varsayılan Mikrofon</option>
+            </select>
+        </div>
+
         <div class="slider-group">
             <label>🎙️ Mic Ses:</label>
             <input type="range" id="micVolume" min="0" max="200" value="100">

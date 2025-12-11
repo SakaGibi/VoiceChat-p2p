@@ -25,9 +25,9 @@ const btnConnect = document.getElementById('btnConnect');
 const btnToggleMic = document.getElementById('btnToggleMic');
 const btnToggleSound = document.getElementById('btnToggleSound');
 const audioControls = document.getElementById('audioControls');
-const settingsPanel = document.getElementById('settingsPanel');
 const btnTheme = document.getElementById('btnTheme');
 
+const micSelect = document.getElementById('micSelect'); // YENİ
 const micSlider = document.getElementById('micVolume');
 const micVal = document.getElementById('micVal');
 const masterSlider = document.getElementById('masterVolume');
@@ -37,8 +37,53 @@ const masterVal = document.getElementById('masterVal');
 window.onload = () => {
     if (!window.SimplePeer) document.getElementById('error-log').innerText = "HATA: SimplePeer yüklenemedi. Preload ayarlarını kontrol et.";
     loadSettings();
+    getMicrophones(); // YENİ: Mikrofonları listele
     console.log("✅ Renderer.js yüklendi ve hazır.");
 };
+
+// --- YENİ: MİKROFONLARI LİSTELEME ---
+async function getMicrophones() {
+    try {
+        // İsimleri görebilmek için önce izin isteyip kapatıyoruz
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        tempStream.getTracks().forEach(track => track.stop());
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+        micSelect.innerHTML = ''; // Temizle
+        
+        // Varsayılan seçenek
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = "";
+        defaultOpt.text = "Varsayılan Mikrofon";
+        micSelect.appendChild(defaultOpt);
+
+        audioInputs.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            // Eğer etiketi boşsa 'Mikrofon 1, 2' diye adlandır
+            option.text = device.label || `Mikrofon ${micSelect.length}`;
+            micSelect.appendChild(option);
+        });
+
+        // Kayıtlı mikrofonu geri seç
+        const savedMicId = localStorage.getItem('selectedMicId');
+        if (savedMicId) {
+            // Eğer kayıtlı mikrofon hala takılıysa onu seç
+            const exists = audioInputs.some(d => d.deviceId === savedMicId);
+            if (exists) micSelect.value = savedMicId;
+        }
+
+    } catch (err) {
+        console.error("Mikrofon listesi hatası:", err);
+    }
+}
+
+// Mikrofon değişince kaydet
+micSelect.addEventListener('change', (e) => {
+    saveSetting('selectedMicId', e.target.value);
+});
 
 // --- LOCAL STORAGE & TEMA ---
 function saveSetting(key, value) {
@@ -106,10 +151,19 @@ btnConnect.addEventListener('click', async () => {
 
     btnConnect.disabled = true;
     inputUsername.disabled = true;
+    micSelect.disabled = true; // Bağlanınca seçimi kilitle
     
     statusDiv.innerText = "Ses motoru başlatılıyor...";
     try {
-        const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // --- YENİ: SEÇİLEN MİKROFONU KULLAN ---
+        const selectedMicId = micSelect.value;
+        const constraints = {
+            audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+            video: false
+        };
+
+        const rawStream = await navigator.mediaDevices.getUserMedia(constraints);
+        // ----------------------------------------
         
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const source = audioContext.createMediaStreamSource(rawStream);
@@ -139,6 +193,7 @@ btnConnect.addEventListener('click', async () => {
         console.error(err);
         statusDiv.innerText = "HATA: " + err.message;
         btnConnect.disabled = false;
+        micSelect.disabled = false;
     }
 });
 
