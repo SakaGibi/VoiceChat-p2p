@@ -28,16 +28,7 @@
             font-size: 14px;
         }
         
-        /* Ayrıl Butonu (Kırmızı) */
-        #btnDisconnect {
-            background: #f44336;
-            width: 100%; 
-            justify-content: center;
-            display: none; /* Başlangıçta gizli */
-        }
-        #btnDisconnect:hover { background: #d32f2f; }
-        
-        /* Scrollbar Düzeltmesi (Sadece kaydırılabilir alanlar için) */
+        /* Scrollbar Düzeltmesi */
         #users::-webkit-scrollbar, #chatHistory::-webkit-scrollbar { width: 6px; }
         #users::-webkit-scrollbar-thumb, #chatHistory::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
         #users::-webkit-scrollbar-thumb:hover, #chatHistory::-webkit-scrollbar-thumb:hover { background: #777; }
@@ -53,8 +44,16 @@
 
     <div id="status">Hazır...</div>
     
-    <div class="input-group">
-        <input type="text" id="username" placeholder="Kullanıcı Adınız">
+    <div class="join-row">
+        <input type="text" id="username" placeholder="Adınız" class="compact-input">
+        
+        <button id="btnConnect">Katıl</button>
+
+        <div id="activeControls" style="display: none;">
+            <button id="btnToggleMic" title="Mikrofonu Aç/Kapat">🎤</button>
+            <button id="btnToggleSound" title="Sesi Aç/Kapat">🔊</button>
+            <button id="btnDisconnect" title="Ayrıl">✖</button>
+        </div>
     </div>
 
     <div id="settingsPanel">
@@ -82,15 +81,6 @@
         </div>
     </div>
     
-    <div class="controls">
-        <button id="btnConnect">Sohbete Katıl</button>
-        <button id="btnDisconnect">Odadan Ayrıl</button>
-        <div class="audio-controls" id="audioControls">
-            <button id="btnToggleMic">🎤 Mikrofon Açık</button>
-            <button id="btnToggleSound">🔊 Ses Duyuluyor</button>
-        </div>
-    </div>
-    
     <div id="error-log"></div>
 
     <div id="users">
@@ -111,7 +101,7 @@
             <button class="soundpad-btn" >14</button>
             <button class="soundpad-btn" >15</button>
             <button class="soundpad-btn" >16</button>
-            </div>
+        </div>
 
         <h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--text-main); font-size:16px;">Bağlı Kullanıcılar</h3>
         <div id="userList"></div>

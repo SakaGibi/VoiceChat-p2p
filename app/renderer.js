@@ -1,10 +1,12 @@
-// app/renderer.js
+// app/renderer.js - SON SÜRÜM (Kompakt Tasarım & Emojili & Soundpad)
 
 const PORT = 8080;
-// sunucu ip adresi: 3.121.233.106
-const WS_URL = `ws://3.121.233.106:8080`;
+// Sunucu IP adresi (Değişirse burayı güncelleyin)
+const WS_URL = `ws://3.121.233.106:8080`; 
+
 const joinSound = new Audio('assets/gazmaliyim.mp3');
 joinSound.volume = 0.2;
+
 const chatHistory = document.getElementById('chatHistory');
 const msgInput = document.getElementById('msgInput');
 const btnSend = document.getElementById('btnSend');
@@ -13,7 +15,7 @@ let socket;
 let localStream;      
 let processedStream;  
 let micGainNode;
-let sourceNode; // Canlı değişim için kaynak düğümünü tutmamız lazım
+let sourceNode; 
 let audioContext;     
 
 let peers = {}; 
@@ -22,59 +24,58 @@ let isMicMuted = false;
 let isDeafened = false;
 let isConnected = false;
 
-// --- YENİ EKLENECEK GLOBAL DEĞİŞKENLER ---
-let statusTimeout;       // Zamanlayıcıyı tutmak için
-let onlineUserCount = 0; // Kişi sayısını hafızada tutmak için
+// --- GLOBAL VARIABLES ---
+let statusTimeout;       
+let onlineUserCount = 0; 
+let myPeerId = null;
 
-// --- YENİ YARDIMCI FONKSİYON ---
-// Bu fonksiyon mesajı gösterir, 3 saniye sonra kişi sayısına döner
-function showTemporaryStatus(message) {
-    statusDiv.innerText = message;
-    
-    // Eğer önceden ayarlanmış bir sayaç varsa iptal et (üst üste binmesin)
-    if (statusTimeout) clearTimeout(statusTimeout);
-
-    // 3 saniye (3000 ms) sonra varsayılan metne dön
-    statusTimeout = setTimeout(() => {
-        statusDiv.innerText = `Sohbet Odası (${onlineUserCount} Kişi)`;
-    }, 3000);
-}
-
-// UI
+// UI Elements
 const inputUsername = document.getElementById('username');
 const statusDiv = document.getElementById('status');
 const userListDiv = document.getElementById('userList');
+
 const btnConnect = document.getElementById('btnConnect');
+// btnDisconnect artık activeControls içinde, dinamik alacağız veya aşağıda tanımlayacağız
+const activeControls = document.getElementById('activeControls');
 const btnDisconnect = document.getElementById('btnDisconnect');
 const btnToggleMic = document.getElementById('btnToggleMic');
 const btnToggleSound = document.getElementById('btnToggleSound');
-const audioControls = document.getElementById('audioControls');
+
 const btnTheme = document.getElementById('btnTheme');
 
 const micSelect = document.getElementById('micSelect');
-const speakerSelect = document.getElementById('speakerSelect'); // YENİ
+const speakerSelect = document.getElementById('speakerSelect'); 
 const micSlider = document.getElementById('micVolume');
 const micVal = document.getElementById('micVal');
 const masterSlider = document.getElementById('masterVolume');
 const masterVal = document.getElementById('masterVal');
 
+
+// --- YARDIMCI FONKSİYON: GEÇİCİ BİLDİRİM ---
+function showTemporaryStatus(message) {
+    statusDiv.innerText = message;
+    if (statusTimeout) clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => {
+        statusDiv.innerText = `Sohbet Odası (${onlineUserCount} Kişi)`;
+    }, 3000);
+}
+
 // --- BAŞLANGIÇ ---
 window.onload = () => {
     if (!window.SimplePeer) document.getElementById('error-log').innerText = "HATA: SimplePeer yüklenemedi.";
     loadSettings();
-    getDevices(); // Hem mic hem speaker
+    getDevices(); 
 };
 
-// --- CİHAZLARI LİSTELE (GİRİŞ VE ÇIKIŞ) ---
+// --- CİHAZLARI LİSTELE ---
 async function getDevices() {
     try {
-        await navigator.mediaDevices.getUserMedia({ audio: true }); // İzin tetikle
+        await navigator.mediaDevices.getUserMedia({ audio: true }); 
         const devices = await navigator.mediaDevices.enumerateDevices();
         
         const audioInputs = devices.filter(d => d.kind === 'audioinput');
         const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
 
-        // Mikrofonları Doldur
         micSelect.innerHTML = '<option value="">Varsayılan Mikrofon</option>';
         audioInputs.forEach(d => {
             const opt = document.createElement('option');
@@ -83,7 +84,6 @@ async function getDevices() {
             micSelect.appendChild(opt);
         });
 
-        // Hoparlörleri Doldur
         speakerSelect.innerHTML = '<option value="">Varsayılan Hoparlör</option>';
         audioOutputs.forEach(d => {
             const opt = document.createElement('option');
@@ -92,7 +92,6 @@ async function getDevices() {
             speakerSelect.appendChild(opt);
         });
 
-        // Kayıtlı Ayarları Geri Yükle
         const savedMic = localStorage.getItem('selectedMicId');
         if (savedMic && audioInputs.some(d => d.deviceId === savedMic)) micSelect.value = savedMic;
 
@@ -102,52 +101,29 @@ async function getDevices() {
     } catch (err) { console.error(err); }
 }
 
-// --- CANLI CİHAZ DEĞİŞİMLERİ ---
-
-// 1. MİKROFON DEĞİŞİMİ (EN ZOR KISIM)
+// --- CİHAZ DEĞİŞİMLERİ ---
 micSelect.addEventListener('change', async (e) => {
     saveSetting('selectedMicId', e.target.value);
-    
-    // Eğer sohbete bağlıysak canlı değişim yap (Hot Swap)
-    if (isConnected) {
-        console.log("Mikrofon canlı değiştiriliyor...");
-        await switchMicrophone(e.target.value);
-    }
+    if (isConnected) await switchMicrophone(e.target.value);
 });
 
 async function switchMicrophone(deviceId) {
     try {
-        // Eski akışı durdur
-        if (localStream) {
-            localStream.getTracks().forEach(t => t.stop());
-        }
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
 
-        // Yeni akışı al
         const constraints = {
             audio: deviceId ? { deviceId: { exact: deviceId } } : true,
             video: false
         };
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // AudioContext'teki kaynağı değiştir
-        // Önceki kaynağı kopar
         if (sourceNode) sourceNode.disconnect();
         
-        // Yeni kaynak oluştur ve GainNode'a bağla
         sourceNode = audioContext.createMediaStreamSource(newStream);
-        sourceNode.connect(micGainNode); // GainNode zaten Destination'a bağlı, zincir tamam.
+        sourceNode.connect(micGainNode); 
         
-        // P2P Bağlantılarını Güncelle (ReplaceTrack)
-        // Karşı tarafa giden işlenmiş track'i bulmamız lazım. 
-        // processedStream (Destination) değişmedi ama içindeki veri değişti.
-        // Ancak SimplePeer'a "eski track yerine bunu kullan" dememiz gerekebilir.
-        
-        // NOT: AudioContext Destination stream'i otomatik güncellenir mi? Evet.
-        // Ama localStream referansını güncellemeliyiz ki "Mute" fonksiyonu çalışsın.
         localStream = newStream;
-
-        // Mute durumu varsa yenisine de uygula
-        setMicState(isMicMuted);
+        setMicState(isMicMuted); // Eski mute durumunu koru
 
     } catch (err) {
         console.error("Mikrofon değiştirilemedi:", err);
@@ -155,7 +131,6 @@ async function switchMicrophone(deviceId) {
     }
 }
 
-// 2. HOPARLÖR DEĞİŞİMİ
 speakerSelect.addEventListener('change', (e) => {
     const deviceId = e.target.value;
     saveSetting('selectedSpeakerId', deviceId);
@@ -163,12 +138,9 @@ speakerSelect.addEventListener('change', (e) => {
 });
 
 function changeOutputDevice(deviceId) {
-    // Sayfadaki tüm <audio> elementlerini bul ve çıkışını değiştir
     document.querySelectorAll('audio').forEach(async (audio) => {
         if (audio.setSinkId) {
-            try {
-                await audio.setSinkId(deviceId);
-            } catch (err) { console.error("Hoparlör değiştirilemedi:", err); }
+            try { await audio.setSinkId(deviceId); } catch (err) { console.error(err); }
         }
     });
 }
@@ -216,15 +188,15 @@ masterSlider.addEventListener('input', (e) => {
     saveSetting('masterVolume', val); 
 });
 
-// --- BAĞLANMA ---
+// --- BAĞLANMA (BTNCONNECT) ---
 btnConnect.addEventListener('click', async () => {
     const name = inputUsername.value;
     if(!name) return alert("Lütfen bir isim girin!");
     saveSetting('username', name);
 
-    btnConnect.style.display = 'none'; // Bağlan butonunu gizle
-    btnDisconnect.style.display = 'flex'; // Ayrıl butonunu göster
-    
+    // GÖRÜNÜRLÜK AYARLARI (YENİ)
+    btnConnect.style.display = 'none'; 
+    activeControls.style.display = 'flex'; // Kare butonları aç
     inputUsername.disabled = true;
     
     statusDiv.innerText = "Ses motoru başlatılıyor...";
@@ -253,11 +225,11 @@ btnConnect.addEventListener('click', async () => {
 
         statusDiv.innerText = "Sunucuya bağlanılıyor...";
         
-        audioControls.style.display = 'flex';
         msgInput.disabled = false;
         btnSend.disabled = false;
         
         userNames["me"] = name + " (Ben)";
+        myPeerId = 'me';
         addUserUI("me", userNames["me"], true);
         attachVisualizer(processedStream, "me"); 
 
@@ -265,20 +237,15 @@ btnConnect.addEventListener('click', async () => {
         isConnected = true;
     } catch (err) {
         console.error(err);
-        disconnectRoom(); // Hata olursa sıfırla
+        disconnectRoom(); 
         statusDiv.innerText = "HATA: " + err.message;
     }
 });
 
-// Gönder butonuna tıklandığında
 btnSend.addEventListener('click', sendChat);
+msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
 
-// Mesaj input alanında Enter'a basıldığında
-msgInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendChat();
-});
-
-// --- ODADAN AYRILMA (DISCONNECT) ---
+// --- ODADAN AYRILMA ---
 btnDisconnect.addEventListener('click', () => {
     disconnectRoom();
 });
@@ -286,32 +253,23 @@ btnDisconnect.addEventListener('click', () => {
 function disconnectRoom() {
     isConnected = false;
     
-    // 1. Socket'i kapat
-    if (socket) {
-        socket.close();
-        socket = null;
-    }
+    if (socket) { socket.close(); socket = null; }
 
-    // 2. Peer bağlantılarını kapat
-    for (let id in peers) {
-        peers[id].destroy();
-    }
+    for (let id in peers) { peers[id].destroy(); }
     peers = {};
 
-    // 3. Mikrofonu ve Ses Motorunu kapat
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     if (audioContext) audioContext.close();
     localStream = null;
     audioContext = null;
 
-    // 4. Arayüzü Temizle
-    document.getElementById('userList').innerHTML = ''; // Kullanıcı listesini sil
-    document.getElementById('audioContainer').innerHTML = ''; // Audio elementlerini sil
+    document.getElementById('userList').innerHTML = ''; 
+    document.getElementById('audioContainer').innerHTML = ''; 
     
-    // 5. Butonları Eski Haline Getir
-    btnConnect.style.display = 'flex';
-    btnDisconnect.style.display = 'none';
-    audioControls.style.display = 'none';
+    // GÖRÜNÜRLÜK AYARLARI (YENİ)
+    btnConnect.style.display = 'block';     // Katıl butonunu geri getir
+    activeControls.style.display = 'none';  // Kare butonları gizle
+    
     inputUsername.disabled = false;
     msgInput.disabled = true;
     btnSend.disabled = true;
@@ -320,8 +278,6 @@ function disconnectRoom() {
 }
 
 // --- CHAT FONKSİYONLARI ---
-
-// Gelen mesajı ekrana basar (UI Helper)
 function addMessageToUI(sender, text, type, time = null) {
     if (!time) time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     const cleanName = sender.replace(" (Ben)", "");
@@ -331,18 +287,15 @@ function addMessageToUI(sender, text, type, time = null) {
     div.innerHTML = `<span class="msg-sender">${cleanName}</span>${text}<span class="msg-time">${time}</span>`;
     
     chatHistory.appendChild(div);
-    chatHistory.scrollTop = chatHistory.scrollHeight; // Yeni mesajda aşağı kaydır
+    chatHistory.scrollTop = chatHistory.scrollHeight; 
 }
 
-// Mesajı P2P ile gönderir
 function sendChat() {
     const text = msgInput.value.trim();
     if (!text || !isConnected) return;
 
-    // 1. Kendi ekranımıza ekle
     addMessageToUI(userNames['me'], text, 'sent');
 
-    // 2. JSON paketi hazırla
     const payload = JSON.stringify({
         type: 'chat',
         sender: userNames['me'],
@@ -350,34 +303,22 @@ function sendChat() {
         time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
     });
 
-    // 3. Tüm bağlı peer'lara gönder
     for (let id in peers) {
-        try {
-            peers[id].send(payload);
-        } catch (e) { console.error("Mesaj gönderilemedi:", e); }
+        try { peers[id].send(payload); } catch (e) { console.error("Mesaj gönderilemedi:", e); }
     }
-
     msgInput.value = '';
 }
 
-// PEER DURUM GÜNCELLEMESİ GÖNDERME FONKSİYONU ---
 function sendPeerStatusUpdate(payload) {
     if (!isConnected) return;
-    
-    payload.senderId = 'me';
-    
+    payload.senderId = 'me'; 
     const jsonPayload = JSON.stringify(payload);
-
     for (let id in peers) {
-        try {
-            peers[id].send(jsonPayload);
-        } catch (e) { 
-            console.error(`Status gönderilemedi (${id}):`, e); 
-        }
+        try { peers[id].send(jsonPayload); } catch (e) { console.error(`Status gönderilemedi (${id}):`, e); }
     }
 }
 
-// --- SES KONTROLLERİ ---
+// --- SES KONTROLLERİ VE EMOJİLER ---
 function setMicState(mute) {
     if (!localStream) return;
     const track = localStream.getAudioTracks()[0];
@@ -386,43 +327,43 @@ function setMicState(mute) {
 
     sendPeerStatusUpdate({ type: 'mic-status', isMuted: mute });
 
+    // YENİ EMOJİ AYARLARI
     if (isMicMuted) {
-        btnToggleMic.innerText = "🔇 Mikrofon Kapalı";
-        btnToggleMic.style.backgroundColor = "#ff4757";
-        const bar = document.getElementById('meter-fill-me');
-        if(bar) bar.style.backgroundColor = "#555"; 
+        btnToggleMic.innerText = "🎤✖"; // Kapalı Emoji
+        btnToggleMic.style.backgroundColor = "#57160fff"; // Kırmızı
     } else {
-        btnToggleMic.innerText = "🎤 Mikrofon Açık";
-        btnToggleMic.style.backgroundColor = "#2ecc71";
-        const bar = document.getElementById('meter-fill-me');
-        if(bar) bar.style.backgroundColor = "#2ecc71";
+        btnToggleMic.innerText = "🎤";   // Açık Emoji
+        btnToggleMic.style.backgroundColor = "#397251ff"; // Yeşil
     }
 }
+
 btnToggleMic.addEventListener('click', () => {
     if (isDeafened) return alert("Hoparlör kapalıyken mikrofonu açamazsınız!");
     setMicState(!isMicMuted);
 });
+
 btnToggleSound.addEventListener('click', () => {
     isDeafened = !isDeafened;
     document.querySelectorAll('audio').forEach(audio => audio.muted = isDeafened);
+    
+    // YENİ EMOJİ AYARLARI
     if (isDeafened) {
-        btnToggleSound.innerText = "🔇 Ses Kapalı";
-        btnToggleSound.style.backgroundColor = "#ff4757";
-        if (!isMicMuted) setMicState(true);
+        btnToggleSound.innerText = "🔇";  // Ses Kapalı
+        btnToggleSound.style.backgroundColor = "#57160fff";
+        if (!isMicMuted) setMicState(true); // Sağır olunca mikrofonu da kapat
     } else {
-        btnToggleSound.innerText = "🔊 Ses Duyuluyor";
-        btnToggleSound.style.backgroundColor = "#2ecc71";
+        btnToggleSound.innerText = "🔊";  // Ses Açık
+        btnToggleSound.style.backgroundColor = "#397251ff";
     }
 });
 
-// --- SOUNDPAD FONKSİYONLARI ---
-
+// --- SOUNDPAD (GÜNCELLENMİŞ) ---
 const soundEffects = [
-    { file: 'fahh_effect', title: 'Fahh Efekti' },  // 1. Buton
-    { file: 'effect_2',    title: '' }, // 2. buton
-    { file: 'effect_3',    title: '' },
-    { file: 'effect_4',    title: '' },
-    // ... Burayı 16'ya kadar doldurun ...
+    { file: 'fahh_effect', title: 'Fahh Efekti' },  
+    { file: 'effect_2',    title: 'Alkış Sesi' },   
+    { file: 'effect_3',    title: 'Zil Sesi' },     
+    { file: 'effect_4',    title: 'Gülme Efekti' }, 
+    // ... 16'ya kadar doldurun
 ];
 
 document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
@@ -433,14 +374,12 @@ document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
     };
 
     btn.innerText = soundId.toString();
-    
     btn.title = effectInfo.title; 
 
     btn.addEventListener('click', () => {
-        if (!isConnected) return; 
-
-        sendPeerStatusUpdate({ type: 'sound-effect', effectName: effectInfo.file });
+        if (!isConnected) return; // Bağlı değilsek çalma
         
+        sendPeerStatusUpdate({ type: 'sound-effect', effectName: effectInfo.file });
         playLocalSound(effectInfo.file);
     });
 });
@@ -448,16 +387,13 @@ document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
 function playLocalSound(effectName) {
     try {
         const audio = new Audio(`assets/${effectName}.mp3`); 
-        
         const masterVol = document.getElementById('masterVolume').value;
         audio.volume = masterVol / 100;
         
         if (isDeafened) return; 
 
-        audio.play().catch(e => console.warn("Ses çalma hatası (Dosya bozuk veya yok):", e));
-    } catch (e) {
-        console.error("Ses dosyası hatası:", e);
-    }
+        audio.play().catch(e => console.warn("Ses çalma hatası:", e));
+    } catch (e) { console.error("Ses dosyası hatası:", e); }
 }
 
 // --- WEBSOCKET ---
@@ -474,52 +410,32 @@ function connectSocket(name) {
             const data = JSON.parse(event.data);
             
             if (data.type === 'user-list') {
-                // 1. LİSTE GELDİĞİNDE (BAŞLANGIÇ)
-                // Kendimiz (+1) dahil toplam sayıyı kaydet
                 onlineUserCount = data.users.length + 1; 
                 statusDiv.innerText = `Sohbet Odası (${onlineUserCount} Kişi)`;
-                
                 data.users.forEach(user => {
                     userNames[user.id] = user.name;
                     createPeer(user.id, user.name, true);
                 });
             } 
             else if (data.type === 'user-joined') {
-                // 2. BİRİ KATILDIĞINDA
-                onlineUserCount++; // Sayıyı artır
+                onlineUserCount++; 
                 userNames[data.id] = data.name;
                 updateNameUI(data.id, data.name);
-
-                // Bildirim sesi çal
-                joinSound.play().catch(e => console.log("Ses çalma hatası (otomatik oynatma izni gerekebilir):", e));                
-                
-                // Geçici mesajı göster (3 saniye sonra sayıya döner)
+                joinSound.play().catch(e => {});                
                 showTemporaryStatus(`${data.name} katıldı 👋`);
             } 
             else if (data.type === 'user-left') {
-                // 3. BİRİ AYRILDIĞINDA
-                if (peers[data.id]) { // Sadece bizde ekliyse düşelim (Hata önlemi)
-                    onlineUserCount--; // Sayıyı azalt
-                }
-                
-                // İsmi al (yoksa 'Biri')
+                if (peers[data.id]) { onlineUserCount--; }
                 const leaverName = userNames[data.id] || "Biri";
                 removePeer(data.id);
-                
-                // Geçici mesajı göster
                 showTemporaryStatus(`${leaverName} ayrıldı 💨`);
             }
             else if (data.type === 'signal') handleSignal(data.senderId, data.signal);
         } catch (e) { console.error(e); }
     };
     
-    socket.onerror = () => {
-        statusDiv.innerText = "Sunucu Bağlantı Hatası!";
-        disconnectRoom();
-    };
-    socket.onclose = () => {
-         if(isConnected) disconnectRoom();
-    };
+    socket.onerror = () => { statusDiv.innerText = "Sunucu Bağlantı Hatası!"; disconnectRoom(); };
+    socket.onclose = () => { if(isConnected) disconnectRoom(); };
 }
 
 // --- P2P ---
@@ -546,15 +462,14 @@ function createPeer(targetId, name, initiator) {
 
         peer.on('data', data => {
             try {
-                // Gelen veriyi stringe çevirip JSON'a parse et
                 const strData = new TextDecoder("utf-8").decode(data);
                 const msg = JSON.parse(strData);
         
                 if (msg.type === 'chat') {
                     addMessageToUI(msg.sender, msg.text, 'received', msg.time);
-                }
+                } 
                 else if (msg.type === 'mic-status') {
-                    updateMicStatusUI(targetId, msg.isMuted); // targetId, createPeer fonksiyonunun argümanıdır
+                    updateMicStatusUI(targetId, msg.isMuted);
                 }
                 else if (msg.type === 'sound-effect') {
                     playLocalSound(msg.effectName);
@@ -592,20 +507,17 @@ function addUserUI(id, name, isConnected) {
         el.className = 'user-card';
         userListDiv.appendChild(el);
     }
-    
-    const bgColor = isConnected ? 'var(--user-connected)' : 'var(--user-connecting)';
-    el.style.backgroundColor = bgColor;
-    
+        
     let volumeControlHTML = '';
     if (id !== 'me') {
         volumeControlHTML = `
             <div class="user-volume">
                 <label>🔊</label>
                 <input type="range" min="0" max="100" value="100" 
-                       oninput="
+                        oninput="
                            document.getElementById('audio-${id}').volume = this.value/100;
                            document.getElementById('vol-val-${id}').innerText = this.value + '%';
-                       ">
+                        ">
                 <span id="vol-val-${id}">100%</span>
             </div>
         `;
@@ -624,25 +536,22 @@ function addUserUI(id, name, isConnected) {
     `;
 }
 
-// MIKROFON DURUM İKONUNU GÜNCELLE ---
 function updateMicStatusUI(id, isMuted) {
     const userCard = document.getElementById(`user-${id}`);
     if (!userCard) return;
 
     let micIcon = userCard.querySelector('.mic-icon');
-    
     if (!micIcon) {
-        // Eğer ikon yoksa (HTML'de eklemediysek) oluştur.
         micIcon = document.createElement('span');
         micIcon.className = 'mic-icon';
-        userCard.querySelector('.user-info').prepend(micIcon); // Adın önüne ekle
+        userCard.querySelector('.user-info').prepend(micIcon); 
     }
 
     if (isMuted) {
-        micIcon.innerText = '❌'; // Kapalı ikon
+        micIcon.innerText = '❌'; 
         micIcon.style.color = '#ff4757';
     } else {
-        micIcon.innerText = '🎤'; // Açık ikon
+        micIcon.innerText = '🎤'; 
         micIcon.style.color = '#2ecc71';
     }
 }
@@ -656,8 +565,6 @@ function updateNameUI(id, newName) {
 }
 
 function attachVisualizer(stream, id) {
-    // Görselleştirici için yeni bir context açmıyoruz, window.AudioContext veya mevcut olanı kullanıyoruz
-    // Ancak görselleştirici stream'den bağımsız çalışmalı.
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
@@ -668,7 +575,7 @@ function attachVisualizer(stream, id) {
     const barElement = document.getElementById(`meter-fill-${id}`);
 
     function updateMeter() {
-        if (!document.getElementById(`user-${id}`)) return; // Eleman yoksa dur
+        if (!document.getElementById(`user-${id}`)) return; 
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
         for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
@@ -690,7 +597,6 @@ function addAudioElement(id, stream) {
     const masterVol = document.getElementById('masterVolume').value;
     audio.volume = masterVol / 100;
 
-    // Seçili hoparlörü uygula
     const selectedSpeaker = document.getElementById('speakerSelect').value;
     if (selectedSpeaker && audio.setSinkId) {
         audio.setSinkId(selectedSpeaker).catch(e => console.error(e));
