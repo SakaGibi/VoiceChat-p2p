@@ -1,7 +1,8 @@
 // app/renderer.js
 
 const PORT = 8080;
-const WS_URL = `ws://localhost:${PORT}`; 
+// sunucu ip adresi: 3.121.233.106
+const WS_URL = `ws://3.121.233.106:8080`;
 const joinSound = new Audio('assets/gazmaliyim.mp3');
 joinSound.volume = 0.2;
 const chatHistory = document.getElementById('chatHistory');
@@ -359,12 +360,31 @@ function sendChat() {
     msgInput.value = '';
 }
 
+// PEER DURUM GÜNCELLEMESİ GÖNDERME FONKSİYONU ---
+function sendPeerStatusUpdate(payload) {
+    if (!isConnected) return;
+    
+    payload.senderId = 'me';
+    
+    const jsonPayload = JSON.stringify(payload);
+
+    for (let id in peers) {
+        try {
+            peers[id].send(jsonPayload);
+        } catch (e) { 
+            console.error(`Status gönderilemedi (${id}):`, e); 
+        }
+    }
+}
+
 // --- SES KONTROLLERİ ---
 function setMicState(mute) {
     if (!localStream) return;
     const track = localStream.getAudioTracks()[0];
     isMicMuted = mute;
     track.enabled = !mute; 
+
+    sendPeerStatusUpdate({ type: 'mic-status', isMuted: mute });
 
     if (isMicMuted) {
         btnToggleMic.innerText = "🔇 Mikrofon Kapalı";
@@ -490,6 +510,10 @@ function createPeer(targetId, name, initiator) {
                     // Sadece chat mesajlarını ekrana bas
                     addMessageToUI(msg.sender, msg.text, 'received', msg.time);
                 }
+                else if (msg.type === 'mic-status') {
+                    // UI'daki kişinin yanındaki mute ikonunu güncelle
+                    updateMicStatusUI(targetId, msg.isMuted); // targetId, createPeer fonksiyonunun argümanıdır
+                }
             } catch (e) { console.error("Gelen P2P Data hatası:", e); }
         });
 
@@ -544,6 +568,7 @@ function addUserUI(id, name, isConnected) {
 
     el.innerHTML = `
         <div class="user-info">
+            ${id !== 'me' ? '<span class="mic-icon">🎤</span>' : ''} 
             <span class="user-name">${name}</span>
             <span class="user-status">${statusText}</span>
         </div>
@@ -552,6 +577,29 @@ function addUserUI(id, name, isConnected) {
             <div id="meter-fill-${id}" class="meter-fill"></div>
         </div>
     `;
+}
+
+// MIKROFON DURUM İKONUNU GÜNCELLE ---
+function updateMicStatusUI(id, isMuted) {
+    const userCard = document.getElementById(`user-${id}`);
+    if (!userCard) return;
+
+    let micIcon = userCard.querySelector('.mic-icon');
+    
+    if (!micIcon) {
+        // Eğer ikon yoksa (HTML'de eklemediysek) oluştur.
+        micIcon = document.createElement('span');
+        micIcon.className = 'mic-icon';
+        userCard.querySelector('.user-info').prepend(micIcon); // Adın önüne ekle
+    }
+
+    if (isMuted) {
+        micIcon.innerText = '❌'; // Kapalı ikon
+        micIcon.style.color = '#ff4757';
+    } else {
+        micIcon.innerText = '🎤'; // Açık ikon
+        micIcon.style.color = '#2ecc71';
+    }
 }
 
 function updateNameUI(id, newName) {

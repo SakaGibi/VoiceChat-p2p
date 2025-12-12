@@ -19,9 +19,17 @@
   },
   "build": {
     "appId": "com.p2p.voicechat",
-    "productName": "P2P Sesli Sohbet",
+    "productName": "Natla",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "gazmaliyim.ico"
+    },
+    "nsis": {
+        "allowToChangeInstallationDirectory": false,
+        "oneClick": false,                     
+        "perMachine": true,                    
+        "createDesktopShortcut": true,         
+        "createStartMenuShortcut": false       
     },
     "directories": {
       "output": "dist"
