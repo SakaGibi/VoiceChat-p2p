@@ -4,12 +4,14 @@ const PORT = 8080;
 // Sunucu IP adresi (Değişirse burayı güncelleyin)
 const WS_URL = `ws://3.121.233.106:8080`; 
 
-const joinSound = new Audio('assets/gazmaliyim.mp3');
-joinSound.volume = 0.2;
 
 const chatHistory = document.getElementById('chatHistory');
 const msgInput = document.getElementById('msgInput');
 const btnSend = document.getElementById('btnSend');
+const path = require('path');
+const joinSound = new Audio(path.join(__dirname, 'assets', 'gazmaliyim.mp3'));
+joinSound.volume = 0.2;
+
 
 let socket;
 let localStream;      
@@ -386,7 +388,9 @@ document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
 
 function playLocalSound(effectName) {
     try {
-        const audio = new Audio(`assets/${effectName}.mp3`); 
+        const soundPath = path.join(__dirname, 'assets', `${effectName}.mp3`);
+        
+        const audio = new Audio(soundPath); 
         const masterVol = document.getElementById('masterVolume').value;
         audio.volume = masterVol / 100;
         

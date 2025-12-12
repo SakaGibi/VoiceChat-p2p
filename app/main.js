@@ -9,10 +9,11 @@ function createWindow() {
         minHeight: 500,
         title: "Natla",
         autoHideMenuBar: true,
+        icon: path.join(__dirname, 'app/assets/gazmaliyim.ico'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             sandbox: false,
-            nodeIntegration: false, 
+            nodeIntegration: true, 
             contextIsolation: false,
             enableRemoteModule: false
         }
