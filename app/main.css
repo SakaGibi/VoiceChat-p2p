@@ -54,17 +54,17 @@ body {
     color: var(--text-main); 
     height: 100vh; 
     overflow: hidden; 
-    display: flex; /* YATAY DİZİLİMİ AÇAR */
+    display: flex; 
 }
 
 /* --- SOL PANEL (SIDEBAR - Sabit Genişlik) --- */
 .sidebar {
-    width: 350px; /* Kullanıcının istediği boyut */
+    width: 350px; 
     background: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    padding: 10px; /* Kullanıcının istediği padding */
+    padding: 10px; 
     box-sizing: border-box;
     flex-shrink: 0;
     height: 100%;
@@ -72,7 +72,7 @@ body {
 
 /* --- SAĞ PANEL (CHAT ALANI) --- */
 .chat-area {
-    flex: 1; /* Kalan tüm alanı kapla */
+    flex: 1; 
     background: var(--bg-chat);
     display: flex;
     flex-direction: column;
@@ -99,26 +99,24 @@ body {
 }
 
 #msgInput { flex: 1; padding: 8px; border-radius: 16px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; }
-/* app/main.css dosyasında #btnSend bloğunu bul ve değiştir */
 #btnSend { 
-    width: 38px;             /* Butonun genişliğini daralttık */
-    height: 30px;            /* Yüksekliğini de aynı yaptık (Kare görünüm) */
-    padding: 0;              /* Padding'i sıfırladık */
-    font-size: 20px;         /* İkon büyük ve görünür olsun */
+    width: 38px;
+    height: 30px;
+    padding: 0;
+    font-size: 20px;
     flex: none;
     overflow: hidden;
-    /* İkonu ortalamak için flex kullanıyoruz */
     display: flex;
     justify-content: center;
     align-items: center;
-
-    flex-shrink: 0;          /* Küçülmesini engelle */
+    flex-shrink: 0;
     background: var(--btn-primary); 
     color: white; 
     border: none; 
     cursor: pointer;
     border-radius: 16px; 
 }
+
 /* --- MESAJ BALONLARI --- */
 .message {
     max-width: 85%;
@@ -164,16 +162,68 @@ button { padding: 8px; cursor: pointer; border: none; border-radius: 6px; font-s
 
 .slider-group label { 
     font-size: 12px; 
-    width: 60px; /* Etiket genişliğini minimuma indirdik */
+    width: 60px; 
     flex-shrink: 0;
 }
 
-/* DROPDOWN TAŞMA ÇÖZÜMÜ (EN KRİTİK KISIM) */
+/* DROPDOWN TAŞMA ÇÖZÜMÜ */
 .device-select { 
-    flex: 1 1 auto; /* Seçim kutusuna maksimum alan tanı */
+    flex: 1 1 auto; 
     font-size: 12px;
-    min-width: 0; /* Flex item'ın kendi minimum genişliğini 0'a çek */
-    overflow: hidden; /* Taşmayı gizle */
-    text-overflow: ellipsis; /* Uzun metinler için üç nokta göster */
-    white-space: nowrap; /* Metni tek satırda tut */
+    min-width: 0; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+}
+
+/* --- SCROLLBAR DÜZELTMELERİ (index.html'den taşındı) --- */
+#users::-webkit-scrollbar, #chatHistory::-webkit-scrollbar { width: 6px; }
+#users::-webkit-scrollbar-thumb, #chatHistory::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+#users::-webkit-scrollbar-thumb:hover, #chatHistory::-webkit-scrollbar-thumb:hover { background: #777; }
+
+/* SOUNDPAD ÖZEL STILLERİ */
+#soundpadArea {
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 3px; /* Butonlar arası boşluk (Daralttık) */
+    padding: 5px; 
+    margin: 10px 0;
+    border: none; 
+    background-color: var(--input-bg);
+    border-radius: 8px;
+}
+
+.soundpad-btn {
+    flex: 1 1 calc(12.5% - 3px); 
+    
+    min-width: 30px; 
+    max-width: 100%; 
+    height: 30px;    
+    
+    background-color: #6c5ce7; 
+    color: white;
+    font-size: 12px; 
+    font-weight: bold;
+    
+    border: 1px solid rgba(0,0,0,0.1); 
+    border-radius: 4px; 
+    
+    cursor: pointer;
+    transition: all 0.2s ease; 
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0; 
+}
+
+.soundpad-btn:hover {
+    background-color: #a29bfe; 
+    transform: translateY(-1px); 
+    box-shadow: 0 2px 5px rgba(108, 92, 231, 0.4); 
+}
+
+.soundpad-btn:active {
+    transform: translateY(0); 
+    box-shadow: none;
 }

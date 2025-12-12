@@ -415,8 +415,52 @@ btnToggleSound.addEventListener('click', () => {
     }
 });
 
+// --- SOUNDPAD FONKSİYONLARI ---
+
+const soundEffects = [
+    { file: 'fahh_effect', title: 'Fahh Efekti' },  // 1. Buton
+    { file: 'effect_2',    title: '' }, // 2. buton
+    { file: 'effect_3',    title: '' },
+    { file: 'effect_4',    title: '' },
+    // ... Burayı 16'ya kadar doldurun ...
+];
+
+document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
+    const soundId = index + 1;
+    const effectInfo = soundEffects[index] || { 
+        file: `effect_${soundId}`, 
+        title: `Ses Efekti ${soundId}` 
+    };
+
+    btn.innerText = soundId.toString();
+    
+    btn.title = effectInfo.title; 
+
+    btn.addEventListener('click', () => {
+        if (!isConnected) return; 
+
+        sendPeerStatusUpdate({ type: 'sound-effect', effectName: effectInfo.file });
+        
+        playLocalSound(effectInfo.file);
+    });
+});
+
+function playLocalSound(effectName) {
+    try {
+        const audio = new Audio(`assets/${effectName}.mp3`); 
+        
+        const masterVol = document.getElementById('masterVolume').value;
+        audio.volume = masterVol / 100;
+        
+        if (isDeafened) return; 
+
+        audio.play().catch(e => console.warn("Ses çalma hatası (Dosya bozuk veya yok):", e));
+    } catch (e) {
+        console.error("Ses dosyası hatası:", e);
+    }
+}
+
 // --- WEBSOCKET ---
-// --- WEBSOCKET FONKSİYONU GÜNCELLENMİŞ HALİ ---
 function connectSocket(name) {
     socket = new WebSocket(WS_URL);
 
@@ -507,12 +551,13 @@ function createPeer(targetId, name, initiator) {
                 const msg = JSON.parse(strData);
         
                 if (msg.type === 'chat') {
-                    // Sadece chat mesajlarını ekrana bas
                     addMessageToUI(msg.sender, msg.text, 'received', msg.time);
                 }
                 else if (msg.type === 'mic-status') {
-                    // UI'daki kişinin yanındaki mute ikonunu güncelle
                     updateMicStatusUI(targetId, msg.isMuted); // targetId, createPeer fonksiyonunun argümanıdır
+                }
+                else if (msg.type === 'sound-effect') {
+                    playLocalSound(msg.effectName);
                 }
             } catch (e) { console.error("Gelen P2P Data hatası:", e); }
         });
