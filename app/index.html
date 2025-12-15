@@ -6,32 +6,43 @@
     <title>Natla</title>
     <link rel="stylesheet" href="main.css">
     <style>
-        /* Slider stilleri (Önceki stille aynı kalır) */
+        /* HTML İÇİNDE HIZLI STİL AYARLARI */
+        
+        /* Yeni Üst Bar Düzeni (Bildirim + İsim) */
+        .status-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Sabit Boyutlu Kontroller */
+        .fixed-room-select {
+            width: 190px; /* Sabit Genişlik */
+            flex-shrink: 0;
+            cursor: pointer;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--input-border);
+        }
+
+        .fixed-join-btn {
+            width: 90px; /* Sabit Genişlik */
+            flex-shrink: 0;
+        }
+
+        /* Diğer Yardımcı Stiller */
         .slider-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; width: 100%; }
         .slider-group label { font-size: 14px; font-weight: bold; width: 100px; color: var(--text-main); }
         .slider-group input { flex: 1; cursor: pointer; }
         .slider-val { font-size: 12px; width: 35px; text-align: right; font-family: monospace; color: var(--text-muted); }
-        .user-volume { margin-top: 5px; display: flex; align-items: center; gap: 5px; font-size: 12px; }
-        .user-volume input { flex: 1; height: 5px; cursor: pointer; }
-        .user-volume span { font-size: 11px; width: 30px; text-align: right; color: var(--text-muted); }
-        
-        /* Dropdown Stili */
-        .device-select {
-            flex: 1;
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid var(--input-border);
-            background: var(--input-bg);
-            color: var(--text-main);
-            outline: none;
-            max-width: 100%;
-            font-size: 14px;
-        }
-        
-        /* Scrollbar Düzeltmesi */
+        .device-select { flex: 1; padding: 5px; border-radius: 4px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; max-width: 100%; font-size: 14px; }
         #users::-webkit-scrollbar, #chatHistory::-webkit-scrollbar { width: 6px; }
         #users::-webkit-scrollbar-thumb, #chatHistory::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-        #users::-webkit-scrollbar-thumb:hover, #chatHistory::-webkit-scrollbar-thumb:hover { background: #777; }
     </style>
 </head>
 <body>
@@ -42,17 +53,30 @@
         <button id="btnTheme" title="Temayı Değiştir">☀️</button>
     </div>
 
-    <div id="status">Hazır...</div>
-    
-    <div class="join-row">
-        <input type="text" id="username" placeholder="Adınız" class="compact-input">
+    <div class="status-name-row" style="position: relative;">
+        <div id="roomPreview" style="font-size: 12px; color: #aaa;  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 5px; pointer-events: none;">
+            Sunucuya bağlanılıyor...
+        </div>
         
-        <button id="btnConnect">Katıl</button>
+        <input type="text" id="username" placeholder="Adınız" class="compact-input">
+    </div>
+    
+    <div id="status" style="display:none;"></div> 
+    
+    <div class="join-row" style="display: flex; gap: 5px;">
+        <select id="roomSelect" class="compact-input fixed-room-select">
+            <option value="genel">Genel</option>
+            <option value="FBI">FBI</option>
+            <option value="2">1</option>
+            <option value="1">2</option>
+        </select>
+        
+        <button id="btnConnect" class="fixed-join-btn">Katıl</button>
 
-        <div id="activeControls" style="display: none;">
-            <button id="btnToggleMic" title="Mikrofonu Aç/Kapat">🎤</button>
-            <button id="btnToggleSound" title="Sesi Aç/Kapat">🔊</button>
-            <button id="btnDisconnect" title="Ayrıl">✖</button>
+        <div id="activeControls" style="display: none; flex: 1; gap: 5px; justify-content: flex-end;">
+            <button id="btnToggleMic" title="Mikrofonu Aç/Kapat" style="flex:1;">🎤</button>
+            <button id="btnToggleSound" title="Sesi Aç/Kapat" style="flex:1;">🔊</button>
+            <button id="btnDisconnect" title="Ayrıl" style="flex:1;">✖</button>
         </div>
     </div>
 
@@ -127,6 +151,7 @@
 </div>
 
 <div id="audioContainer"></div>
+
 <div id="streamModal" class="stream-modal" style="display: none;">
     <div class="stream-header">
         <span id="streamerName">Yayın</span>
@@ -136,6 +161,7 @@
         <video id="largeVideoPlayer" autoplay playsinline></video>
     </div>
 </div>
+
 <script src="renderer.js"></script>
 </body>
 </html>

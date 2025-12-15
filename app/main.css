@@ -268,7 +268,7 @@ h1 { margin: 0; font-size: 20px; }
     background-color: #28205b; 
     color: white;
     
-    font-size: 12px; 
+    font-size: 10px; 
     font-weight: bold;
     border: 1px solid rgba(0,0,0,0.2); 
     border-radius: 4px; 
@@ -411,4 +411,15 @@ h1 { margin: 0; font-size: 20px; }
     0% { opacity: 1; }
     50% { opacity: 0.6; }
     100% { opacity: 1; }
+}
+
+#roomSelect {
+    flex: 0 0 150px;
+    width: 160px;
+}
+
+#username {
+    width: 150px;
+    height: 28px;
+    font-size: 13px;
 }
