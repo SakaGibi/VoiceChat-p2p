@@ -433,7 +433,7 @@ const soundEffects = [
     { file: 'yalvarırım_ağzına_effect', title: 'yalvarırım ağzına al', short: 'ağzına al' },
     { file: 'sus_artık_effect', title: 'yeter be sus artık', short: 'sus artık' },
     { file: 'buz_bira_effect', title: 'buz gibi bira var mı?', short: 'buz bira' },
-    { file: 'bruh_effect', title: 'bruh', short: 'bruh' },
+    { file: 'osuruk_effect', title: 'yankılı osuruk', short: 'osuruk' },
     { file: 'aglama_oyna_Effect', title: 'ağlama hade oyna', short: 'ağlama oyna' }
 ];
 
