@@ -7,10 +7,12 @@ const btnSend = document.getElementById('btnSend');
 const path = require('path');
 
 // Giriş Sesi
-let joinPath = path.join(__dirname, 'assets', 'gazmaliyim.mp3');
+let joinPath = path.join(__dirname, 'assets', 'RIZZ_effect.mp3');
 joinPath = joinPath.replace('app.asar', 'app.asar.unpacked');
 const joinSound = new Audio(joinPath);
 joinSound.volume = 0.2;
+const leaveSound = new Audio(path.join(__dirname, 'assets', 'cikis_effect.mp3').replace('app.asar', 'app.asar.unpacked'));
+leaveSound.volume = 0.2; // Herkes için sabit ses düzeyi
 
 let socket;
 let localStream;
@@ -173,8 +175,15 @@ function initSocketConnection() {
                 createPeer(data.id, data.name, true);
             } 
             else if (data.type === 'user-left') {
+            // 1. Önce sesi çalmayı dene (Hatalardan etkilenmemesi için en üstte)
+                try {
+                    leaveSound.currentTime = 0; // Eğer üst üste çıkış olursa sesi başa sar
+                    leaveSound.play().catch(e => console.log("Ses çalma hatası:", e));
+                } catch (e) { console.error("Audio play failed", e); }
+
                 const leaverName = userNames[data.id] || "Biri";
                 showTemporaryStatus(`${leaverName} ayrıldı 💨`, "#dbc9c9ff"); 
+    
                 removePeer(data.id);
             }
             else if (data.type === 'signal') {
@@ -429,11 +438,11 @@ const soundEffects = [
     { file: 'neden_ben_effect', title: 'Neden dede neden beni seçtin', short: 'neden dede' },
     { file: 'samsun_anlık_effect', title: 'adalet mahallesinde gaza', short: 'Samsun Anlık' },
     { file: 'simdi_hoca_effect', title: 'şimdi hocam, position is obvious', short: 'Şimdi Hoca' },
-    { file: 'ananı_effect', title: 'ananı s...', short: 'ananı s...' },
+    { file: 'soru_yanlısmıs_effect', title: 'Yauv sen yanlış yapmadın, soru yanlışmış yauv', short: 'Soru Yanlışmış Yauv' },
     { file: 'yalvarırım_ağzına_effect', title: 'yalvarırım ağzına al', short: 'ağzına al' },
     { file: 'sus_artık_effect', title: 'yeter be sus artık', short: 'sus artık' },
     { file: 'buz_bira_effect', title: 'buz gibi bira var mı?', short: 'buz bira' },
-    { file: 'osuruk_effect', title: 'yankılı osuruk', short: 'osuruk' },
+    { file: 'osu_effect', title: 'yankılı osuruk', short: 'osuruk' },
     { file: 'aglama_oyna_Effect', title: 'ağlama hade oyna', short: 'ağlama oyna' }
 ];
 
