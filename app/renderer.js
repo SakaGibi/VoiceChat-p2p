@@ -623,7 +623,6 @@ function openStreamModal(id) {
 if (btnAttach && fileInput) {
     // Tıklama olayını sadece bir kez tanımlıyoruz
     btnAttach.addEventListener('click', () => {
-        console.log("📎 Ataç tıklandı. Bağlantı durumu:", isConnected);
         if (!isConnected) return alert("Önce bir odaya bağlanmalısınız!");
         
         // Sadece bir kez tetiklenir
@@ -634,8 +633,6 @@ if (btnAttach && fileInput) {
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        console.log("📂 Dosya seçildi:", file.name);
 
         // 2GB Limit Kontrolü
         const MAX_SIZE = 2 * 1024 * 1024 * 1024; 
