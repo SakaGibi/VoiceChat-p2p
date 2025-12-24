@@ -76,7 +76,14 @@ const isDev = !__dirname.includes('app.asar');
 if (isDev) {
     CONFIG_PATH = path.join(__dirname, 'config.json');
 } else {
-    CONFIG_PATH = path.join(process.resourcesPath, '..', 'config.json');
+    const appData = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + "/.local/share");
+    const appDir = path.join(appData, 'Natla'); 
+    
+    if (!fs.existsSync(appDir)){
+        try { fs.mkdirSync(appDir, { recursive: true }); } catch(e) { console.error("Klasör oluşturulamadı", e); }
+    }
+    
+    CONFIG_PATH = path.join(appDir, 'config.json');
 }
 
 function connectWithConfig() {
