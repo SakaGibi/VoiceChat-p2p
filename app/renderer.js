@@ -1,5 +1,3 @@
-const WS_URL = `ws://3.121.233.106:8080`; 
-
 const SimplePeer = require('simple-peer'); 
 const chatHistory = document.getElementById('chatHistory');
 const msgInput = document.getElementById('msgInput');
@@ -7,6 +5,7 @@ const btnSend = document.getElementById('btnSend');
 const path = require('path');
 const fileInput = document.getElementById('fileInput');
 const btnAttach = document.getElementById('btnAttach');
+const fs = require('fs');
 
 // Uygulama Sesleri
 let joinPath = path.join(__dirname, 'assets', 'RIZZ_effect.mp3');
@@ -19,6 +18,8 @@ const notificationSound = new Audio(path.join(__dirname, 'assets', 'notification
 notificationSound.volume = 0.5;
 
 let socket;
+let configData = null;
+let CONFIG_PATH;
 let localStream;
 let screenStream;
 let processedStream;  
@@ -70,32 +71,89 @@ const micSlider = document.getElementById('micVolume');
 const micVal = document.getElementById('micVal');
 const masterSlider = document.getElementById('masterVolume');
 const masterVal = document.getElementById('masterVal');
+const isDev = !__dirname.includes('app.asar');
+
+if (isDev) {
+    CONFIG_PATH = path.join(__dirname, 'config.json');
+} else {
+    CONFIG_PATH = path.join(process.resourcesPath, '..', 'config.json');
+}
+
+function connectWithConfig() {
+    try {
+        if (fs.existsSync(CONFIG_PATH)) {
+            // Dosya varsa oku ve bağlan
+            configData = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+            console.log("✅ Config yüklendi:", configData.SIGNALING_SERVER);
+            initSocketConnection(); 
+        } else {
+            // Dosya yoksa MODAL'ı aç
+            const modal = document.getElementById('passwordModal');
+            const serverInput = document.getElementById('serverInput'); // Yeni input
+            const keyInput = document.getElementById('keyInput');
+            const btnSave = document.getElementById('btnSaveKey');
+
+            if (modal) {
+                modal.style.display = 'flex';
+                
+                btnSave.onclick = () => {
+                    const enteredServer = serverInput.value.trim();
+                    const enteredKey = keyInput.value.trim();
+
+                    if (!enteredServer || !enteredKey) {
+                        return alert("Lütfen sunucu adresi ve anahtarı eksiksiz girin!");
+                    }
+
+                    // Kullanıcının girdiği bilgilerle config oluştur
+                    const defaultConfig = { 
+                        SIGNALING_SERVER: enteredServer, 
+                        ACCESS_KEY: enteredKey 
+                    };
+
+                    try {
+                        fs.writeFileSync(CONFIG_PATH, JSON.stringify(defaultConfig, null, 2));
+                        configData = defaultConfig;
+                        
+                        modal.style.display = 'none';
+                        alert("Ayarlar kaydedildi. Bağlanılıyor...");
+                        initSocketConnection();
+                    } catch (e) {
+                        alert("Dosya yazma hatası: " + e.message);
+                    }
+                };
+            }
+        }
+    } catch (error) {
+        console.error("Config hatası:", error);
+    }
+}
+
+// --- BAŞLANGIÇ ---
+window.onload = () => {
+    loadSettings();
+    getDevices(); 
+    connectWithConfig(); // initSocketConnection'ı buradan sildik, çünkü yukarıda çağırıyoruz
+};
 
 // --- BİLDİRİM SİSTEMİ ---
 function showTemporaryStatus(message, color = "#4cd137") {
     if (!roomPreviewDiv) return;
-
     if (statusTimeout) clearTimeout(statusTimeout);
-
     roomPreviewDiv.innerText = message;
     roomPreviewDiv.style.color = color;
-    // Status text'i bold yapalım ki dikkat çeksin
     roomPreviewDiv.style.fontWeight = "bold";
-
     statusTimeout = setTimeout(() => {
         statusTimeout = null; 
         updateRoomPreview();  
-    }, 3000); // 3 Saniye
+    }, 3000);
 }
 
 // --- ODA ÖNİZLEME ---
 function updateRoomPreview() {
     if (!roomSelect) return;
     if (statusTimeout) return;
-
     const selectedRoom = roomSelect.value;
     const usersInRoom = allUsers.filter(u => u.room === selectedRoom);
-    
     if(roomPreviewDiv) {
         roomPreviewDiv.style.fontWeight = "normal";
         if (isConnected) {
@@ -128,71 +186,55 @@ if(roomSelect) {
     });
 }
 
-// --- BAŞLANGIÇ ---
-window.onload = () => {
-    loadSettings();
-    getDevices(); 
-    initSocketConnection(); 
-};
-
 // --- WEBSOCKET ---
 function initSocketConnection() {
+    if (!configData || !configData.SIGNALING_SERVER) {
+        if(roomPreviewDiv) roomPreviewDiv.innerText = "Config hatası!";
+        return;
+    }
     if(roomPreviewDiv) roomPreviewDiv.innerText = "Sunucuya bağlanılıyor...";
-    socket = new WebSocket(WS_URL);
-
-    socket.onopen = () => {
-        console.log("Lobiye bağlanıldı.");
+    socket = new WebSocket(configData.SIGNALING_SERVER);
+    socket.onopen = () => { console.log("Lobiye bağlanıldı."); };
+    socket.onerror = () => { 
+        if(roomPreviewDiv) roomPreviewDiv.innerText = "Sunucuya ulaşılamadı!";
+        // Hata durumunda 2 saniye sonra config'i sil ve reload at (Kullanıcı düzeltebilsin diye)
+        setTimeout(() => {
+            if(confirm("Sunucuya bağlanılamadı. Ayarları sıfırlayıp tekrar denemek ister misiniz?")) {
+                try { fs.unlinkSync(CONFIG_PATH); location.reload(); } catch(e){}
+            }
+        }, 2000);
     };
-
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            
             if (data.type === 'user-list') {
                 allUsers = data.users; 
                 updateRoomPreview(); 
-                
                 if (isConnected) {
-                   data.users.forEach(u => {
-                       if(u.id !== myPeerId) userNames[u.id] = u.name;
-                   });
+                   data.users.forEach(u => { if(u.id !== myPeerId) userNames[u.id] = u.name; });
                 }
             } 
-            else if (data.type === 'me') {
-                myPeerId = data.id; 
-            }
-
+            else if (data.type === 'me') { myPeerId = data.id; }
             if (!isConnected) return;
-
             if (data.type === 'user-joined') {
                 if (data.id === myPeerId) return; 
-
                 userNames[data.id] = data.name;
                 updateNameUI(data.id, data.name);
                 joinSound.play().catch(e => {});                
-                
                 showTemporaryStatus(`${data.name} katıldı 👋`, "#c1d3beff");
-
-                // HEMEN UI EKLE (Bağlanıyor...)
                 addUserUI(data.id, data.name, false); 
-                
                 createPeer(data.id, data.name, true);
             } 
             else if (data.type === 'user-left') {
-            // 1. Önce sesi çalmayı dene (Hatalardan etkilenmemesi için en üstte)
                 try {
-                    leaveSound.currentTime = 0; // Eğer üst üste çıkış olursa sesi başa sar
-                    leaveSound.play().catch(e => console.log("Ses çalma hatası:", e));
-                } catch (e) { console.error("Audio play failed", e); }
-
+                    leaveSound.currentTime = 0;
+                    leaveSound.play().catch(e => {});
+                } catch (e) {}
                 const leaverName = userNames[data.id] || "Biri";
                 showTemporaryStatus(`${leaverName} ayrıldı 💨`, "#dbc9c9ff"); 
-    
                 removePeer(data.id);
             }
-            else if (data.type === 'signal') {
-                handleSignal(data.senderId, data.signal);
-            }
+            else if (data.type === 'signal') { handleSignal(data.senderId, data.signal); }
             else if (data.type === 'chat') {
                 addMessageToUI(data.sender, data.text, 'received', data.time);
                 if (!isDeafened) notificationSound.play().catch(e => {});
@@ -200,10 +242,8 @@ function initSocketConnection() {
             else if (data.type === 'mic-status') updateMicStatusUI(data.senderId, data.isMuted); 
             else if (data.type === 'sound-effect') playLocalSound(data.effectName);
             else if (data.type === 'video-stopped') removeVideoElement(data.senderId); 
-
         } catch (e) { console.error(e); }
     };
-    
     socket.onerror = () => { if(roomPreviewDiv) roomPreviewDiv.innerText = "Sunucu hatası!"; };
     socket.onclose = () => { 
         if(roomPreviewDiv) roomPreviewDiv.innerText = "Bağlantı koptu.";
@@ -214,12 +254,10 @@ function initSocketConnection() {
 // --- CİHAZLARI LİSTELE ---
 async function getDevices() {
     try {
-        await navigator.mediaDevices.getUserMedia({ audio: true }).catch(e => console.log("Mic izni yok"));
-        
+        await navigator.mediaDevices.getUserMedia({ audio: true }).catch(e => {});
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter(d => d.kind === 'audioinput');
         const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-
         if(micSelect) {
             micSelect.innerHTML = '<option value="">Varsayılan Mikrofon</option>';
             audioInputs.forEach(d => {
@@ -231,7 +269,6 @@ async function getDevices() {
             const savedMic = localStorage.getItem('selectedMicId');
             if (savedMic) micSelect.value = savedMic;
         }
-
         if(speakerSelect) {
             speakerSelect.innerHTML = '<option value="">Varsayılan Hoparlör</option>';
             audioOutputs.forEach(d => {
@@ -249,19 +286,13 @@ async function getDevices() {
 // --- BAĞLANMA ---
 btnConnect.addEventListener('click', async () => {
     const name = inputUsername.value;
-    
     if(!name) {
         alert("Lütfen bir isim girin!");
-        setTimeout(() => {
-            inputUsername.disabled = false; 
-            inputUsername.focus();          
-        }, 100);
+        setTimeout(() => { inputUsername.disabled = false; inputUsername.focus(); }, 100);
         return;
     }
-    
     currentRoom = roomSelect.value;
     saveSetting('username', name);
-
     btnConnect.style.display = 'none'; 
     roomSelect.disabled = true;
     activeControls.style.display = 'flex';
@@ -270,16 +301,14 @@ btnConnect.addEventListener('click', async () => {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     outputAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (outputAudioContext.state === 'suspended') await outputAudioContext.resume();
-
     if (speakerSelect && speakerSelect.value && outputAudioContext.setSinkId) {
-            outputAudioContext.setSinkId(speakerSelect.value).catch(e => console.error(e));
+            outputAudioContext.setSinkId(speakerSelect.value).catch(e => {});
     }
 
     try {
         const selectedMicId = micSelect ? micSelect.value : null;
         const constraints = { audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true, video: false };
         const rawStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
         sourceNode = audioContext.createMediaStreamSource(rawStream);
         micGainNode = audioContext.createGain();
         micGainNode.gain.value = micSlider.value / 100; 
@@ -288,11 +317,9 @@ btnConnect.addEventListener('click', async () => {
         micGainNode.connect(destination);
         localStream = rawStream; 
         processedStream = destination.stream; 
-
         msgInput.disabled = false;
         btnSend.disabled = false;
         btnShareScreen.disabled = false;
-
         userNames["me"] = name + " (Ben)";
         addUserUI("me", userNames["me"], true);
         attachVisualizer(processedStream, "me"); 
@@ -300,12 +327,11 @@ btnConnect.addEventListener('click', async () => {
         socket.send(JSON.stringify({ 
             type: 'join', 
             name: name,
-            room: currentRoom 
+            room: currentRoom,
+            key: configData.ACCESS_KEY
         }));
-        
         isConnected = true;
         updateRoomPreview();
-
     } catch (err) {
         console.error(err);
         disconnectRoom(); 
@@ -317,7 +343,6 @@ btnConnect.addEventListener('click', async () => {
 btnSend.addEventListener('click', sendChat);
 msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
 
-// Local Storage
 function saveSetting(key, value) { localStorage.setItem(key, value); }
 function loadSettings() {
     const savedName = localStorage.getItem('username');
@@ -335,22 +360,17 @@ btnTheme.addEventListener('click', () => {
     btnTheme.innerText = isLight ? '🌙' : '☀️';
     saveSetting('theme', isLight ? 'light' : 'dark');
 });
-inputUsername.addEventListener('input', (e) => saveSetting('username', e.target.value));
 
-// Ses Ayarları
 micSlider.addEventListener('input', (e) => {
     micVal.innerText = e.target.value + "%";
     if (micGainNode) micGainNode.gain.value = e.target.value / 100; 
-    saveSetting('micVolume', e.target.value); 
 });
 masterSlider.addEventListener('input', (e) => {
     masterVal.innerText = e.target.value + "%";
     document.querySelectorAll('audio').forEach(audio => audio.volume = e.target.value / 100);
-    saveSetting('masterVolume', e.target.value); 
     notificationSound.volume = e.target.value / 100;
 });
 
-// Ekran Paylaşımı
 btnShareScreen.addEventListener('click', async () => {
     if (!isSharingScreen) {
         try {
@@ -360,7 +380,7 @@ btnShareScreen.addEventListener('click', async () => {
             btnShareScreen.style.backgroundColor = "#e74c3c";
             screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
             for (let id in peers) { try { peers[id].addStream(screenStream); } catch (err) {} }
-        } catch (err) { console.error("Ekran paylaşımı iptal:", err); }
+        } catch (err) {}
     } else { stopScreenShare(); }
 });
 
@@ -379,7 +399,6 @@ function stopScreenShare() {
     btnShareScreen.style.backgroundColor = "#0288d1"; 
 }
 
-// Odadan Ayrılma
 btnDisconnect.addEventListener('click', () => { disconnectRoom(); });
 function disconnectRoom() {
     isConnected = false;
@@ -388,7 +407,6 @@ function disconnectRoom() {
     location.reload(); 
 }
 
-// Chat
 function addMessageToUI(sender, text, type, time = null) {
     if (!time) time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     const cleanName = sender ? sender.replace(" (Ben)", "") : "Biri";
@@ -407,7 +425,6 @@ function sendChat() {
     msgInput.value = '';
 }
 
-// P2P Helper
 function sendPeerStatusUpdate(payload) {
     if (!isConnected) return;
     payload.senderId = myPeerId; 
@@ -415,7 +432,6 @@ function sendPeerStatusUpdate(payload) {
     for (let id in peers) { try { peers[id].send(jsonPayload); } catch (e) { } }
 }
 
-// Mic/Sound Toggle
 function setMicState(mute) {
     if (!localStream) return;
     const track = localStream.getAudioTracks()[0];
@@ -434,12 +450,11 @@ btnToggleSound.addEventListener('click', () => {
     else { btnToggleSound.innerText = "🔊"; btnToggleSound.style.backgroundColor = "#397251"; }
 });
 
-// Soundpad
 const soundEffects = [
-    { file: 'fahh_effect', title: 'Fahh Efekti', short: 'fahh',},  
+    { file: 'fahh_effect', title: 'Fahh Efekti', short: 'fahh'},  
     { file: 'ahhhhhhh_effect', title: 'Ahhhhhhh Efekti', short: 'aaah'},    
-    { file: 'besili_camis_effect',    title: 'besili camış', short: 'besili camış' },     
-    { file: 'denyo_dangalak_effect',    title: 'denyo mu dangalak mı?', short: 'denyo' },
+    { file: 'besili_camis_effect', title: 'besili camış', short: 'besili camış' },     
+    { file: 'denyo_dangalak_effect', title: 'denyo mu dangalak mı?', short: 'denyo' },
     { file: 'deplasman_yasağı_effect', title: 'deplasman yarağı', short: 'dep. yasak' },
     { file: 'levo_rage_effect', title: 'harika bir oyun', short: 'işte bu' },
     { file: 'masaj_salonu_effect', title: 'mecidiyeköy masaj salonu', short: 'masaj salonu' },
@@ -464,6 +479,7 @@ document.querySelectorAll('.soundpad-btn').forEach((btn, index) => {
         playLocalSound(effectInfo.file);
     });
 });
+
 function playLocalSound(effectName) {
     try {
         let soundPath = path.join(__dirname, 'assets', `${effectName}.mp3`).replace('app.asar', 'app.asar.unpacked');
@@ -477,8 +493,6 @@ function playLocalSound(effectName) {
 // --- P2P MANTIĞI ---
 function createPeer(targetId, name, initiator) {
     if (targetId === myPeerId) return;
-    
-    // peers yerine window.peers kullanarak global erişim sağlıyoruz
     if (!window.peers) window.peers = {}; 
     if (window.peers[targetId]) return; 
 
@@ -497,9 +511,8 @@ function createPeer(targetId, name, initiator) {
         });
         
         peer.on('stream', stream => {
-            if (stream.getVideoTracks().length > 0) {
-                addVideoElement(targetId, stream);
-            } else { 
+            if (stream.getVideoTracks().length > 0) { addVideoElement(targetId, stream); } 
+            else { 
                 addAudioElement(targetId, stream); 
                 addUserUI(targetId, userNames[targetId] || name, true); 
                 attachVisualizer(stream, targetId); 
@@ -508,55 +521,23 @@ function createPeer(targetId, name, initiator) {
         
         peer.on('data', data => { 
             try {
-                // Buffer verisini çözümlüyoruz
                 const strData = new TextDecoder("utf-8").decode(data);
                 const msg = JSON.parse(strData);
-                
-                // DOSYA MESAJLARI: metadata, end ve cancel mesajlarını yönlendiriyoruz
                 if (msg.type === 'file-metadata' || msg.type === 'file-end' || msg.type === 'file-cancel') {
-                    console.log(`📡 P2P Sinyali Alındı: ${msg.type}`);
                     handleIncomingFileData(targetId, data);
                     return;
                 }
-
-                // CHAT MESAJLARI
-                if (msg.type === 'chat') {
-                    addMessageToUI(msg.sender, msg.text, 'received', msg.time);
-                    if (!isDeafened && typeof notificationSound !== 'undefined') {
-                        notificationSound.play().catch(e => {});
-                    }
-                } 
-                // MİKROFON DURUMU
-                else if (msg.type === 'mic-status') {
-                    updateMicStatusUI(targetId, msg.isMuted);
-                } 
-                // SES EFEKTLERİ
-                else if (msg.type === 'sound-effect') {
-                    playLocalSound(msg.effectName);
-                } 
-                // VİDEO DURDURMA
-                else if (msg.type === 'video-stopped') {
-                    removeVideoElement(targetId);
-                }
-
-            } catch (e) {
-                // JSON değilse doğrudan dosya parçasıdır (binary)
-                handleIncomingFileData(targetId, data);
-            }
+                if (msg.type === 'chat') { addMessageToUI(msg.sender, msg.text, 'received', msg.time); } 
+                else if (msg.type === 'mic-status') { updateMicStatusUI(targetId, msg.isMuted); } 
+                else if (msg.type === 'sound-effect') { playLocalSound(msg.effectName); } 
+                else if (msg.type === 'video-stopped') { removeVideoElement(targetId); }
+            } catch (e) { handleIncomingFileData(targetId, data); }
         });
         
         peer.on('close', () => removePeer(targetId));
-        
-        peer.on('error', err => { 
-            console.error(`Peer ${targetId} hatası:`, err); 
-        }); 
-        
-        // Peer nesnesini global listeye kaydediyoruz
+        peer.on('error', err => { console.error(`Peer ${targetId} hatası:`, err); }); 
         window.peers[targetId] = peer;
-        
-    } catch (e) { 
-        console.error("Peer oluşturma hatası:", e); 
-    }
+    } catch (e) { console.error("Peer oluşturma hatası:", e); }
 }
 
 function handleSignal(senderId, signal) {
@@ -564,23 +545,16 @@ function handleSignal(senderId, signal) {
         const userName = userNames[senderId] || "Bilinmeyen";
         createPeer(senderId, userName, false);
     }
-    if (peers[senderId]) {
-        peers[senderId].signal(signal);
-    }
+    if (peers[senderId]) { peers[senderId].signal(signal); }
 }
 
-// UI Helpers (BAĞLANIYOR... MANTIĞI)
 let activeRemoteStreams = {}; 
-// renderer.js içinde bu fonksiyonu bul ve tamamen bununla değiştir:
 
 function addUserUI(id, name, isConnected) {
     let el = document.getElementById(`user-${id}`);
-    
-    // Duruma göre metin ve renk
     const statusText = isConnected ? 'Canlı' : 'Bağlanıyor...';
     const statusColor = isConnected ? '#2ecc71' : '#f1c40f'; 
     
-    // Eğer kart varsa sadece durumu güncelle
     if (el) {
         const statusSpan = el.querySelector('.user-status');
         if (statusSpan) {
@@ -590,7 +564,6 @@ function addUserUI(id, name, isConnected) {
         return;
     }
     
-    // Kart yoksa oluştur
     el = document.createElement('div'); 
     el.id = `user-${id}`; 
     el.className = 'user-card'; 
@@ -604,7 +577,6 @@ function addUserUI(id, name, isConnected) {
     </div>` : '';
     
     el.innerHTML = `<div class="user-info">${id !== 'me' ? '<span class="mic-icon">🎤</span>' : ''}<span class="user-name">${name}</span><span class="user-status" style="color:${statusColor}">${statusText}</span></div>${volHTML}<div class="meter-bg"><div id="meter-fill-${id}" class="meter-fill"></div></div>`;
-    
     if(activeRemoteStreams[id]) addVideoElement(id, activeRemoteStreams[id]); 
 }
 
@@ -614,18 +586,24 @@ function updateMicStatusUI(id, isMuted) {
     if (!mic) { mic = document.createElement('span'); mic.className='mic-icon'; el.querySelector('.user-info').prepend(mic); }
     mic.innerText = isMuted ? '❌' : '🎤'; mic.style.color = isMuted ? '#ff4757' : '#2ecc71';
 }
+
 function updateNameUI(id, name) { const el = document.getElementById(`user-${id}`); if(el) el.querySelector('.user-name').innerText = name; }
+
 function attachVisualizer(stream, id) {
-    const ac = new (window.AudioContext || window.webkitAudioContext)(); const src = ac.createMediaStreamSource(stream); const an = ac.createAnalyser(); an.fftSize = 64; src.connect(an);
+    const ac = new (window.AudioContext || window.webkitAudioContext)(); 
+    const src = ac.createMediaStreamSource(stream); 
+    const an = ac.createAnalyser(); an.fftSize = 64; src.connect(an);
     const data = new Uint8Array(an.frequencyBinCount); const bar = document.getElementById(`meter-fill-${id}`);
     function draw() { if(!document.getElementById(`user-${id}`)) return; an.getByteFrequencyData(data); let sum=0; for(let i of data) sum+=i; 
     if(bar) bar.style.width = Math.min(100, (sum/data.length)*2.5) + "%"; requestAnimationFrame(draw); } draw();
 }
+
 function addAudioElement(id, stream) {
     if (document.getElementById(`audio-${id}`)) return;
     const aud = document.createElement('audio'); aud.id=`audio-${id}`; aud.srcObject=stream; aud.autoplay=true; aud.muted=true; document.getElementById('audioContainer').appendChild(aud);
     if(outputAudioContext) { try { const src=outputAudioContext.createMediaStreamSource(stream); const gn=outputAudioContext.createGain(); src.connect(gn); gn.connect(outputAudioContext.destination); peerGainNodes[id]=gn; } catch(e){ aud.muted=false; } }
 }
+
 function addVideoElement(id, stream) {
     activeRemoteStreams[id] = stream;
     const card = document.getElementById(`user-${id}`);
@@ -634,11 +612,13 @@ function addVideoElement(id, stream) {
     }
     stream.getVideoTracks()[0].onended = () => removeVideoElement(id);
 }
+
 function removeVideoElement(id) {
     delete activeRemoteStreams[id];
     const card = document.getElementById(`user-${id}`); if(card) { const b=card.querySelector('.stream-icon-btn'); if(b) b.remove(); }
     if(streamModal.style.display!=='none' && streamerNameLabel.getAttribute('data-id')===id) { streamModal.style.display='none'; largeVideoPlayer.srcObject=null; }
 }
+
 function removePeer(id) {
     if(peers[id]) { peers[id].destroy(); delete peers[id]; }
     if(peerGainNodes[id]) delete peerGainNodes[id];
@@ -646,6 +626,7 @@ function removePeer(id) {
     const u = document.getElementById(`user-${id}`); if(u) u.remove();
     const a = document.getElementById(`audio-${id}`); if(a) a.remove();
 }
+
 function openStreamModal(id) {
     if(!activeRemoteStreams[id]) return alert("Yayın yok");
     largeVideoPlayer.srcObject = activeRemoteStreams[id];
@@ -655,38 +636,24 @@ function openStreamModal(id) {
 }
 
 if (btnAttach && fileInput) {
-    // Tıklama olayını sadece bir kez tanımlıyoruz
     btnAttach.addEventListener('click', () => {
         if (!isConnected) return alert("Önce bir odaya bağlanmalısınız!");
-        
-        // Sadece bir kez tetiklenir
         fileInput.click();
     });
-
-    // Dosya seçme olayını tanımlıyoruz
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        // 2GB Limit Kontrolü
         const MAX_SIZE = 2 * 1024 * 1024 * 1024; 
         if (file.size > MAX_SIZE) {
             alert(`Dosya çok büyük (${(file.size / (1024 * 1024)).toFixed(2)} MB)! Maksimum 2GB gönderebilirsiniz.`);
             e.target.value = '';
             return;
         }
-
-        // Dosya gönderimini başlat
         if (typeof window.addFileSentUI === 'function') {
             const tId = "transfer-" + Date.now();
             window.addFileSentUI(file, tId);
-            
-            for (let id in peers) {
-                window.sendFile(peers[id], file, tId);
-            }
+            for (let id in peers) { window.sendFile(peers[id], file, tId); }
         }
-        
-        // Değeri sıfırla (Aynı dosyayı tekrar seçebilmek için)
         e.target.value = ''; 
     });
 }
