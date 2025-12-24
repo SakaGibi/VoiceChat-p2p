@@ -244,7 +244,12 @@ function initSocketConnection() {
             else if (data.type === 'signal') { handleSignal(data.senderId, data.signal); }
             else if (data.type === 'chat') {
                 addMessageToUI(data.sender, data.text, 'received', data.time);
-                if (!isDeafened) notificationSound.play().catch(e => {});
+    
+                // Mesaj geldiğinde eğer kulaklık kapalı (deafened) değilse sesi çal
+                if (!isDeafened) {
+                    notificationSound.currentTime = 0; // Sesi başa sar (üst üste gelirse çalsın)
+                    notificationSound.play().catch(e => console.error("Ses çalma hatası:", e));
+                }
             }
             else if (data.type === 'mic-status') updateMicStatusUI(data.senderId, data.isMuted); 
             else if (data.type === 'sound-effect') playLocalSound(data.effectName);
@@ -526,19 +531,32 @@ function createPeer(targetId, name, initiator) {
             }
         });
         
+        // renderer.js içindeki peer.on('data') kısmını bul ve şu şekilde güncelle:
         peer.on('data', data => { 
             try {
                 const strData = new TextDecoder("utf-8").decode(data);
                 const msg = JSON.parse(strData);
+                
                 if (msg.type === 'file-metadata' || msg.type === 'file-end' || msg.type === 'file-cancel') {
                     handleIncomingFileData(targetId, data);
                     return;
                 }
-                if (msg.type === 'chat') { addMessageToUI(msg.sender, msg.text, 'received', msg.time); } 
+                
+                if (msg.type === 'chat') { 
+                    addMessageToUI(msg.sender, msg.text, 'received', msg.time); 
+                    
+                    // --- EKSİK OLAN KISIM BURASIYDI ---
+                    if (!isDeafened) {
+                        notificationSound.currentTime = 0;
+                        notificationSound.play().catch(e => console.error("Ses çalma hatası:", e));
+                    }
+                } 
                 else if (msg.type === 'mic-status') { updateMicStatusUI(targetId, msg.isMuted); } 
                 else if (msg.type === 'sound-effect') { playLocalSound(msg.effectName); } 
                 else if (msg.type === 'video-stopped') { removeVideoElement(targetId); }
-            } catch (e) { handleIncomingFileData(targetId, data); }
+            } catch (e) { 
+                handleIncomingFileData(targetId, data); 
+            }
         });
         
         peer.on('close', () => removePeer(targetId));
@@ -607,8 +625,22 @@ function attachVisualizer(stream, id) {
 
 function addAudioElement(id, stream) {
     if (document.getElementById(`audio-${id}`)) return;
-    const aud = document.createElement('audio'); aud.id=`audio-${id}`; aud.srcObject=stream; aud.autoplay=true; aud.muted=true; document.getElementById('audioContainer').appendChild(aud);
-    if(outputAudioContext) { try { const src=outputAudioContext.createMediaStreamSource(stream); const gn=outputAudioContext.createGain(); src.connect(gn); gn.connect(outputAudioContext.destination); peerGainNodes[id]=gn; } catch(e){ aud.muted=false; } }
+
+    const aud = document.createElement('audio'); 
+    aud.id = `audio-${id}`; 
+    aud.srcObject = stream; 
+    
+    aud.autoplay = true; 
+    aud.muted = false; 
+    aud.volume = 1.0;  
+    aud.style.display = "none"; 
+    aud.controls = false;      
+
+    document.getElementById('audioContainer').appendChild(aud);
+
+    aud.play().catch(e => {
+        console.error("Oto oynatma hatası:", e);
+    });
 }
 
 function addVideoElement(id, stream) {
