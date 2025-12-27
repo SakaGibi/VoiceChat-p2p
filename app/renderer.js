@@ -131,6 +131,12 @@ btnSaveKey.addEventListener('click', () => {
 
 // --- GÜNCELLEME MANTIĞI ---
 
+const btnDownloadUpdate = document.createElement('button');
+btnDownloadUpdate.id = "btnDownloadUpdate";
+btnDownloadUpdate.innerText = "Güncellemeyi İndir";
+btnDownloadUpdate.style.cssText = "display: none; background: #27ae60; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;";
+btnInstallUpdate.parentNode.insertBefore(btnDownloadUpdate, btnInstallUpdate);
+
 // Güncellemeleri Kontrol Et Butonu
 btnCheckUpdate.addEventListener('click', () => {
     btnCheckUpdate.disabled = true;
@@ -138,18 +144,29 @@ btnCheckUpdate.addEventListener('click', () => {
     ipcRenderer.send('check-for-update'); // main.js'e sor
 });
 
-// Güncellemeyi Yükle Butonu
+// İndirmeyi Başlat Butonu (Yeni)
+btnDownloadUpdate.addEventListener('click', () => {
+    btnDownloadUpdate.disabled = true;
+    updateStatus.innerText = "İndirme başlatılıyor...";
+    ipcRenderer.send('start-download'); // main.js'e indir emri ver
+});
+
+// Güncelleme Kur Butonu
 btnInstallUpdate.addEventListener('click', () => {
     btnInstallUpdate.disabled = true;
     updateStatus.innerText = "Uygulama kapatılıyor ve güncelleniyor...";
     ipcRenderer.send('install-update'); // main.js'e kur emri ver
 });
 
-// Ana süreçten (main.js) gelen yanıtları dinle
-ipcRenderer.on('update-available', () => {
-    updateStatus.innerText = "Yeni bir güncelleme bulundu! İndiriliyor...";
-    updateStatus.style.color = "#e67e22";
-    btnCheckUpdate.style.display = 'none';
+// Ana süreçten (main.js) gelen yanıtlar
+// renderer.js içindeki ipcRenderer.on('update-available') kısmını güncelle:
+ipcRenderer.on('update-available', (event, version) => {
+    // Gelen 'version' bilgisini metne ekliyoruz
+    updateStatus.innerText = `Yeni sürüm bulundu! v:${version}, İndirmek istiyor musunuz?`;
+    updateStatus.style.color = "#3498db";
+    
+    btnCheckUpdate.style.display = 'none'; 
+    btnDownloadUpdate.style.display = 'block'; 
 });
 
 ipcRenderer.on('update-not-available', () => {
@@ -158,23 +175,24 @@ ipcRenderer.on('update-not-available', () => {
     btnCheckUpdate.disabled = false;
 });
 
-ipcRenderer.on('update-error', (event, error) => {
-    updateStatus.innerText = "Güncelleme kontrolü başarısız.";
-    updateStatus.style.color = "#e74c3c";
-    console.error("Güncelleme hatası:", error);
-    btnCheckUpdate.disabled = false;
-});
-
 ipcRenderer.on('download-progress', (event, progressObj) => {
     const percent = Math.round(progressObj.percent);
     updateStatus.innerText = `İndiriliyor: %${percent}`;
-    
-    // İndirme biterse (veya bitmeye yakınsa) yükleme butonunu göster
-    if (percent >= 100) {
-        updateStatus.innerText = "İndirme tamamlandı! Yüklemeye hazır.";
-        btnCheckUpdate.style.display = 'none';
-        btnInstallUpdate.style.display = 'block';
-    }
+    btnDownloadUpdate.style.display = 'none'; // İndirme başlayınca butonu gizle
+});
+
+// main.js'ten 'update-ready' gelince (indirme bitince)
+ipcRenderer.on('update-ready', () => {
+    updateStatus.innerText = "İndirme tamamlandı! Yüklemeye hazır.";
+    updateStatus.style.color = "#2ecc71";
+    btnDownloadUpdate.style.display = 'none';
+    btnInstallUpdate.style.display = 'block'; // Kur butonunu göster
+});
+
+ipcRenderer.on('update-error', (event, error) => {
+    updateStatus.innerText = "Hata: " + error;
+    updateStatus.style.color = "#e74c3c";
+    btnCheckUpdate.disabled = false;
 });
 
 btnConnect.disabled = true;

@@ -8,8 +8,9 @@ const isDev = !app.isPackaged;
 
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = "info";
-autoUpdater.autoDownload = true; // Güncelleme bulununca otomatik indirsin ama kullanıcı "Yükle" deyince kurulsun
-
+autoUpdater.autoDownload = false; // Güncelleme bulununca otomatik indirsin ama kullanıcı "Yükle" deyince kurulsun
+autoUpdater.forceDevUpdateConfig = true;
+autoUpdater.allowDowngrade = true;
 let mainWindow;
 
 function createWindow () {
@@ -35,19 +36,20 @@ function createWindow () {
     });
   });
 
-  // Otomatik güncellemeyi buradan kaldırdık veya istersen sadece log için bırakabilirsin.
-  // mainWindow.once('ready-to-show', () => { autoUpdater.checkForUpdatesAndNotify(); });
 }
 
 // --- IPC MANTIĞI: Renderer'dan Gelen İstekler ---
-
 ipcMain.on('check-for-update', () => {
-  if (isDev) {
+  // if (isDev) {
     // Geliştirme modunda butona basılırsa arayüzün asılı kalmaması için hemen cevap dönüyoruz
-    mainWindow.webContents.send('update-not-available');
-  } else {
+    //mainWindow.webContents.send('update-not-available');
+  // } else {
     autoUpdater.checkForUpdates();
-  }
+  // }
+});
+
+ipcMain.on('start-download', () => {
+  autoUpdater.downloadUpdate();
 });
 
 ipcMain.on('install-update', () => {
@@ -83,8 +85,9 @@ autoUpdater.on('download-progress', (progressObj) => {
   mainWindow.webContents.send('download-progress', progressObj);
 });
 
-autoUpdater.on('update-downloaded', (info) => {
-  log.info('İndirme tamamlandı.');
+autoUpdater.on('update-available', (info) => {
+  log.info('Güncelleme bulundu!');
+  mainWindow.webContents.send('update-available', info.version); 
 });
 
 app.whenReady().then(() => {
