@@ -1,15 +1,19 @@
-const { app, BrowserWindow, session, desktopCapturer } = require('electron'); // GÜNCELLENDİ
+const { app, BrowserWindow, session, desktopCapturer, ipcMain } = require('electron'); 
 const path = require('path');
-
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 
+// Geliştirme modunda olup olmadığımızı kontrol et
+const isDev = !app.isPackaged;
+
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = "info";
-log.info('Uygulama başlıyor...');
+autoUpdater.autoDownload = true; // Güncelleme bulununca otomatik indirsin ama kullanıcı "Yükle" deyince kurulsun
+
+let mainWindow;
 
 function createWindow () {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 650,
     height: 800,
     webPreferences: {
@@ -31,35 +35,60 @@ function createWindow () {
     });
   });
 
-  mainWindow.once('ready-to-show', () => {
-    autoUpdater.checkForUpdatesAndNotify();
-  });
+  // Otomatik güncellemeyi buradan kaldırdık veya istersen sadece log için bırakabilirsin.
+  // mainWindow.once('ready-to-show', () => { autoUpdater.checkForUpdatesAndNotify(); });
 }
+
+// --- IPC MANTIĞI: Renderer'dan Gelen İstekler ---
+
+ipcMain.on('check-for-update', () => {
+  if (isDev) {
+    // Geliştirme modunda butona basılırsa arayüzün asılı kalmaması için hemen cevap dönüyoruz
+    mainWindow.webContents.send('update-not-available');
+  } else {
+    autoUpdater.checkForUpdates();
+  }
+});
+
+ipcMain.on('install-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+// --- AUTOUPDATER OLAYLARI: Renderer'a Bilgi Gönderme ---
 
 autoUpdater.on('checking-for-update', () => {
   log.info('Güncelleme kontrol ediliyor...');
 });
+
 autoUpdater.on('update-available', (info) => {
-  log.info('Güncelleme bulundu! İndiriliyor...');
+  log.info('Güncelleme bulundu!');
+  mainWindow.webContents.send('update-available');
 });
+
 autoUpdater.on('update-not-available', (info) => {
   log.info('Güncelleme yok.');
+  mainWindow.webContents.send('update-not-available');
 });
+
 autoUpdater.on('error', (err) => {
   log.info('Güncelleme hatası: ' + err);
+  mainWindow.webContents.send('update-error', err.toString());
 });
+
 autoUpdater.on('download-progress', (progressObj) => {
-  log.info('İndirme hızı: ' + progressObj.bytesPerSecond);
-  log.info('İndirilen: ' + progressObj.percent + '%');
+  mainWindow.webContents.send('download-progress', progressObj);
 });
+
 autoUpdater.on('update-downloaded', (info) => {
-  log.info('İndirme tamamlandı. Uygulama kapatılıp güncellenecek.');
-  autoUpdater.quitAndInstall();  
+  log.info('İndirme tamamlandı.');
 });
 
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

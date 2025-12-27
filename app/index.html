@@ -19,7 +19,7 @@
 
         /* Sabit Boyutlu Kontroller */
         .fixed-room-select {
-            width: 190px; /* Sabit Genişlik */
+            width: 190px;
             flex-shrink: 0;
             cursor: pointer;
             background: var(--input-bg);
@@ -28,7 +28,7 @@
         }
 
         .fixed-join-btn {
-            width: 90px; /* Sabit Genişlik */
+            width: 90px;
             flex-shrink: 0;
         }
 
@@ -54,14 +54,23 @@
         <div style="background: #2b2b2b; padding: 30px; border-radius: 12px; border: 1px solid #444; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 400px; position: relative;">
             <button id="btnCloseSettings" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #888; cursor: pointer; font-size: 20px;">✖</button>
             <h3 style="color: #fff; margin-bottom: 20px; font-family: sans-serif; text-align: center;">⚙️ Sunucu Ayarları</h3>
-
+        
             <label style="color: #bbb; font-size: 12px; display:block; margin-bottom:5px;">Sunucu Adresi (ws://...)</label>
             <input type="text" id="serverInput" value="" placeholder="ws://ip_adresi:port" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #555; background: #1a1a1a; color: white; margin-bottom: 15px; outline: none;">
 
             <label style="color: #bbb; font-size: 12px; display:block; margin-bottom:5px;">Erişim Anahtarı</label>
             <input type="password" id="keyInput" placeholder="Sunucu Şifresi..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #555; background: #1a1a1a; color: white; margin-bottom: 20px; outline: none;">
+        
+            <button id="btnSaveKey" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 20px;">AYARLARI KAYDET</button>
 
-               <button id="btnSaveKey" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;">AYARLARI KAYDET</button>
+            <div id="updateSection" style="border-top: 1px solid #444; padding-top: 15px;">
+                <label style="color: #bbb; font-size: 12px; display:block; margin-bottom:10px;">Uygulama Güncelleme</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="btnCheckUpdate" style="background: #3498db; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;">Güncellemeleri Kontrol Et</button>
+                    <button id="btnInstallUpdate" style="display: none; background: #e67e22; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;">Güncellemeyi Yükle ve Yeniden Başlat</button>
+                    <span id="updateStatus" style="font-size: 11px; color: #888; text-align: center;">Sürüm yükleniyor...</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -69,7 +78,6 @@
         <div id="roomPreview" style="font-size: 12px; color: #aaa;  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 5px; pointer-events: none;">
             Sunucuya bağlanılıyor...
         </div>
-
         <input type="text" id="username" placeholder="Adınız" class="compact-input">
     </div>
     
@@ -117,8 +125,6 @@
         </div>
     </div>
     
-    <div id="error-log"></div>
-
     <div id="users">
         <div id="soundpadArea">
             <button class="soundpad-btn" >1</button>
@@ -161,7 +167,6 @@
         <input type="text" id="msgInput" placeholder="Bir mesaj yaz..." disabled>
         <button id="btnAttach">📁</button>
         <button id="btnSend" disabled>></button>
-
     </div>
 </div>
 
@@ -174,20 +179,6 @@
     </div>
     <div class="stream-content">
         <video id="largeVideoPlayer" autoplay playsinline></video>
-    </div>
-</div>
-
-<div id="passwordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
-    <div style="background: #2b2b2b; padding: 30px; border-radius: 12px; border: 1px solid #444; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 400px;">
-        <h3 style="color: #fff; margin-bottom: 20px; font-family: sans-serif; text-align: center;">⚙️ Sunucu Ayarları</h3>
-        
-        <label style="color: #bbb; font-size: 12px; display:block; margin-bottom:5px;">Sunucu Adresi (ws://...)</label>
-        <input type="text" id="serverInput" value="" placeholder="ws://ip_adresi:port" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #555; background: #1a1a1a; color: white; margin-bottom: 15px; outline: none;">
-
-        <label style="color: #bbb; font-size: 12px; display:block; margin-bottom:5px;">Erişim Anahtarı</label>
-        <input type="password" id="keyInput" placeholder="Sunucu Şifresi..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #555; background: #1a1a1a; color: white; margin-bottom: 20px; outline: none;">
-        
-        <button id="btnSaveKey" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;">BAĞLAN</button>
     </div>
 </div>
 

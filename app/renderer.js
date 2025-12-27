@@ -1,3 +1,4 @@
+const { ipcRenderer } = require('electron'); // Güncelleme iletişimi için eklendi
 const SimplePeer = require('simple-peer'); 
 const chatHistory = document.getElementById('chatHistory');
 const msgInput = document.getElementById('msgInput');
@@ -28,6 +29,7 @@ let sourceNode;
 let audioContext;
 let outputAudioContext; 
 let peerGainNodes = {}; 
+let currentAppVersion = "Sürüm yükleniyor...";
 
 window.peers = {};
 window.userNames = {}; 
@@ -62,6 +64,11 @@ const serverInput = document.getElementById('serverInput');
 const keyInput = document.getElementById('keyInput');
 const btnSaveKey = document.getElementById('btnSaveKey');
 
+// Update Elements
+const btnCheckUpdate = document.getElementById('btnCheckUpdate');
+const btnInstallUpdate = document.getElementById('btnInstallUpdate');
+const updateStatus = document.getElementById('updateStatus');
+
 const streamModal = document.getElementById('streamModal');
 const largeVideoPlayer = document.getElementById('largeVideoPlayer');
 const btnCloseStream = document.getElementById('btnCloseStream');
@@ -80,7 +87,7 @@ const masterSlider = document.getElementById('masterVolume');
 const masterVal = document.getElementById('masterVal');
 const isDev = !__dirname.includes('app.asar');
 
-// --- BUTON ÖZELLİKLERİNİ ATA (Hata olsa bile bunlar çalışmalı) ---
+// --- BUTON ÖZELLİKLERİNİ ATA ---
 
 // Ayarlar (Çark) Butonu
 btnSettings.addEventListener('click', () => {
@@ -122,6 +129,54 @@ btnSaveKey.addEventListener('click', () => {
     }
 });
 
+// --- GÜNCELLEME MANTIĞI ---
+
+// Güncellemeleri Kontrol Et Butonu
+btnCheckUpdate.addEventListener('click', () => {
+    btnCheckUpdate.disabled = true;
+    updateStatus.innerText = "Güncellemeler kontrol ediliyor...";
+    ipcRenderer.send('check-for-update'); // main.js'e sor
+});
+
+// Güncellemeyi Yükle Butonu
+btnInstallUpdate.addEventListener('click', () => {
+    btnInstallUpdate.disabled = true;
+    updateStatus.innerText = "Uygulama kapatılıyor ve güncelleniyor...";
+    ipcRenderer.send('install-update'); // main.js'e kur emri ver
+});
+
+// Ana süreçten (main.js) gelen yanıtları dinle
+ipcRenderer.on('update-available', () => {
+    updateStatus.innerText = "Yeni bir güncelleme bulundu! İndiriliyor...";
+    updateStatus.style.color = "#e67e22";
+    btnCheckUpdate.style.display = 'none';
+});
+
+ipcRenderer.on('update-not-available', () => {
+    updateStatus.innerText = `Uygulama şu an güncel: v${currentAppVersion}`;
+    updateStatus.style.color = "#888";
+    btnCheckUpdate.disabled = false;
+});
+
+ipcRenderer.on('update-error', (event, error) => {
+    updateStatus.innerText = "Güncelleme kontrolü başarısız.";
+    updateStatus.style.color = "#e74c3c";
+    console.error("Güncelleme hatası:", error);
+    btnCheckUpdate.disabled = false;
+});
+
+ipcRenderer.on('download-progress', (event, progressObj) => {
+    const percent = Math.round(progressObj.percent);
+    updateStatus.innerText = `İndiriliyor: %${percent}`;
+    
+    // İndirme biterse (veya bitmeye yakınsa) yükleme butonunu göster
+    if (percent >= 100) {
+        updateStatus.innerText = "İndirme tamamlandı! Yüklemeye hazır.";
+        btnCheckUpdate.style.display = 'none';
+        btnInstallUpdate.style.display = 'block';
+    }
+});
+
 btnConnect.disabled = true;
 btnConnect.innerText = "Sunucuya bağlanılıyor...";
 
@@ -144,7 +199,6 @@ function connectWithConfig() {
             configData = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
             console.log("✅ Config yüklendi:", configData.SIGNALING_SERVER);
             
-            // initSocketConnection'da URL hatası olsa bile catch bloğu yakalar, JS durmaz
             try {
                 initSocketConnection(); 
             } catch (wsError) {
@@ -163,6 +217,13 @@ function connectWithConfig() {
 
 // --- BAŞLANGIÇ ---
 window.onload = () => {
+    ipcRenderer.invoke('get-app-version').then(v => { 
+        currentAppVersion = v;
+        updateStatus.innerText = "Sürüm: " + v; 
+    }).catch(err => {
+        console.error("Sürüm alınamadı:", err);
+        updateStatus.innerText = "Sürüm bilgisi alınamadı";
+    });    
     loadSettings();
     getDevices(); 
     connectWithConfig();
@@ -227,7 +288,6 @@ function initSocketConnection() {
     }
     if(roomPreviewDiv) roomPreviewDiv.innerText = "Sunucuya bağlanılıyor...";
     
-    // Geçersiz URL (örneğin sonunda 'a' olan) new WebSocket() anında hata fırlatır
     try {
         socket = new WebSocket(configData.SIGNALING_SERVER);
     } catch (e) {
@@ -236,7 +296,7 @@ function initSocketConnection() {
             roomPreviewDiv.innerText = "Hatalı Sunucu Adresi!";
             roomPreviewDiv.style.color = "#e74c3c";
         }
-        return; // Fonksiyonun geri kalanını çalıştırma
+        return;
     }
 
     socket.onopen = () => { 
