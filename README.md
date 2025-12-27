@@ -103,6 +103,9 @@ To modify the client application or build it from the source:
 
 ---
 
+## A NOTE on Development & AI
+This project was built with significant assistance from Large Language Models, as my main priority was to get it working quickly (voice chat + general structure was built in 4-5 hours) for use with my friends. As a result, code cleanliness and architectural best practices were not the primary focus, and you will likely encounter a fair amount of "spaghetti code" throughout the repository. I apologize for the messy implementation; the objective was simply to ensure the platform functions as intended for our use.
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
