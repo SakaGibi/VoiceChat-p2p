@@ -1,6 +1,6 @@
 {
   "name": "natla",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "Sesli sohbet uygulaması",
   "main": "main.js",
   "repository": {
@@ -18,16 +18,13 @@
       }
     ],
     "extraResources": [
-      "config.json",
-      {
-        "from": "assets",
-        "to": "assets",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "config.json"
     ],
     "asar": true,
+    "asarUnpack": [
+      "assets/**",
+      "assets/*.mp3" 
+    ],
     "files": [
       "**/*",
       "assets/**/*"

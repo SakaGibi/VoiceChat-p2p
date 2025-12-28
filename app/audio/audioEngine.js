@@ -3,19 +3,15 @@ const path = require('path');
 const dom = require('../ui/dom');
 const state = require('../state/appState');
 
-// Dosya yolu bulucu
-function getAssetPath(fileName) {
-    const devPath = path.join(__dirname, '..', 'assets', fileName);
-    
-    const prodPath = path.join(process.resourcesPath, 'assets', fileName);
+// --- DOSYA YOLU BULUCU ---
+function getAssetPath(fileName) {    
+    let assetPath = path.join(__dirname, '..', 'assets', fileName);
 
-    if (fs.existsSync(devPath)) {
-        return devPath;
-    } else if (fs.existsSync(prodPath)) {
-        return prodPath;
-    } else {
-        return devPath;
+    if (assetPath.includes('app.asar')) {
+        assetPath = assetPath.replace('app.asar', 'app.asar.unpacked');
     }
+
+    return assetPath;
 }
 
 // --- SİSTEM SESLERİ ---
@@ -29,7 +25,7 @@ function playSystemSound(type) {
 
     try {
         const soundPath = getAssetPath(fileName);
-        const audio = new Audio(`file://${soundPath.replace(/\\/g, '/')}`);
+        const audio = new Audio(soundPath);
         
         audio.volume = dom.masterSlider ? (dom.masterSlider.value / 100) : 1.0;
         
@@ -38,11 +34,8 @@ function playSystemSound(type) {
         }
         
         audio.play().catch(() => {});
-    } catch (e) {
-        console.error(e);}
+    } catch (e) { console.error(e); }
 }
-
-
 
 // --- YEREL EFEKT SESLERİ (Soundpad) ---
 function playLocalSound(effectName) {
@@ -51,7 +44,7 @@ function playLocalSound(effectName) {
         const fileName = effectName.endsWith('.mp3') ? effectName : `${effectName}.mp3`;
         const soundPath = getAssetPath(fileName);
         
-        const audio = new Audio(`file://${soundPath.replace(/\\/g, '/')}`);
+        const audio = new Audio(soundPath);
         audio.volume = dom.masterSlider ? (dom.masterSlider.value / 100) : 1.0;
         
         if (dom.speakerSelect && dom.speakerSelect.value && typeof audio.setSinkId === 'function') {
@@ -108,7 +101,7 @@ async function initLocalStream(deviceId = null) {
     }
 }
 
-// --- UZAK KULLANICI SESİNİ EKLE (DÜZELTİLMİŞ) ---
+// --- UZAK KULLANICI SESİNİ EKLE ---
 function addAudioElement(id, stream) {
     let audioEl = document.getElementById(`audio-${id}`);
     if (!audioEl) {
@@ -193,7 +186,7 @@ async function setAudioOutputDevice(deviceId) {
     }
 }
 
-// mikrofonu açar/kapatır
+// --- MİKROFON DURUMUNU DEĞİŞTİR ---
 function setMicState(muted) {
     state.isMicMuted = muted;
 
@@ -223,7 +216,7 @@ function setMicState(muted) {
     userList.updateMicStatusUI("me", muted);
 }
 
-// Hoparlörü kapatır/açar (Sağırlaştırma Modu)
+// --- SAĞIRLAŞTIRMA (DEAFEN) ---
 function toggleDeafen() {
     state.isDeafened = !state.isDeafened;
     const isDeaf = state.isDeafened;
