@@ -18,8 +18,6 @@ function connect(url) {
         return;
     }
 
-    console.log("🔌 Sunucuya bağlanılıyor:", url);
-
     try {
         socket = new WebSocket(url);
     } catch (e) {
@@ -28,8 +26,6 @@ function connect(url) {
     }
 
     socket.onopen = () => {
-        console.log("✅ WebSocket Bağlantısı Kuruldu!");
-        
         if (dom.btnConnect) {
             dom.btnConnect.disabled = false;
             dom.btnConnect.innerText = "Katıl";
@@ -37,7 +33,6 @@ function connect(url) {
         
         // Kuyruktaki mesajları gönder
         if (messageQueue.length > 0) {
-            console.log(`📨 Kuyrukta bekleyen ${messageQueue.length} mesaj gönderiliyor...`);
             while (messageQueue.length > 0) {
                 const msg = messageQueue.shift();
                 send(msg);
@@ -92,12 +87,10 @@ function handleMessage(data) {
 
         case 'me': 
             state.myPeerId = data.id;
-            console.log("🆔 Kimlik alındı:", data.id);
             break;
 
         case 'room-users': 
         case 'user-list':
-            console.log("👥 Kullanıcı listesi alındı:", data.users);
             state.allUsers = data.users;
             
             if (roomPreview) roomPreview.updateRoomPreview();
@@ -108,13 +101,9 @@ function handleMessage(data) {
                         state.userNames[u.id] = u.name;
                         userList.addUserUI(u.id, u.name, true);
                         
-                        // [ÇÖZÜM]: Sadece ID'si benimkinden küçük olanlara ben başlatırım.
-                        // Büyük olanlar bana başlatacak, ben bekleyeceğim.
+                        // [ÇÖZÜM]: ID Karşılaştırmalı başlatma
                         if (shouldIInitiate(state.myPeerId, u.id)) {
-                            console.log(`🚀 Başlatıcı benim -> ${u.name}`);
                             peerService.createPeer(u.id, u.name, true);
-                        } else {
-                            console.log(`⏳ Bekliyorum -> ${u.name} başlatacak.`);
                         }
                     }
                 });
@@ -123,30 +112,23 @@ function handleMessage(data) {
 
         case 'user-joined':
             if (data.id === state.myPeerId) return;
-            console.log("👋 Yeni kullanıcı:", data.name);
             
             state.userNames[data.id] = data.name;
             userList.addUserUI(data.id, data.name, true);
             audioEngine.playSystemSound('join');
             
-            // [ÇÖZÜM]: Burada da aynı ID kontrolü
+            // [ÇÖZÜM]: ID Karşılaştırmalı başlatma
             if (shouldIInitiate(state.myPeerId, data.id)) {
-                console.log(`🚀 Başlatıcı benim -> ${data.name}`);
                 peerService.createPeer(data.id, data.name, true);
-            } else {
-                console.log(`⏳ Bekliyorum -> ${data.name} başlatacak.`);
             }
             break;
 
         case 'user-left':
-            console.log("🚪 Kullanıcı ayrıldı:", data.id);
             audioEngine.playSystemSound('leave');
             peerService.removePeer(data.id);
             break;
 
         case 'signal':
-            // Sinyal geldiyse peerService.handleSignal devreye girer.
-            // Eğer biz "Bekleyen" taraf isek, handleSignal bizim için peer'ı "Initiator: false" olarak yaratır.
             peerService.handleSignal(data.senderId, data.signal);
             break;
 
@@ -177,8 +159,6 @@ function handleMessage(data) {
 
 /**
  * [ÇÖZÜM] Çarpışma Önleyici Mantık
- * İki ID'yi string olarak karşılaştırır.
- * Alfabetik/Sayısal olarak büyük olan taraf bağlantıyı başlatır.
  */
 function shouldIInitiate(myId, targetId) {
     if (!myId || !targetId) return false;

@@ -3,6 +3,21 @@ const path = require('path');
 const dom = require('../ui/dom');
 const state = require('../state/appState');
 
+// Dosya yolu bulucu
+function getAssetPath(fileName) {
+    const devPath = path.join(__dirname, '..', 'assets', fileName);
+    
+    const prodPath = path.join(process.resourcesPath, 'assets', fileName);
+
+    if (fs.existsSync(devPath)) {
+        return devPath;
+    } else if (fs.existsSync(prodPath)) {
+        return prodPath;
+    } else {
+        return devPath;
+    }
+}
+
 // --- SİSTEM SESLERİ ---
 function playSystemSound(type) {
     if (state.isDeafened) return;
@@ -13,25 +28,29 @@ function playSystemSound(type) {
     else if (type === 'notification') fileName = 'notification_effect.mp3';
 
     try {
-        const soundPath = path.join(__dirname, '..', 'assets', fileName);
+        const soundPath = getAssetPath(fileName);
         const audio = new Audio(`file://${soundPath.replace(/\\/g, '/')}`);
+        
         audio.volume = dom.masterSlider ? (dom.masterSlider.value / 100) : 1.0;
         
         if (dom.speakerSelect && dom.speakerSelect.value && typeof audio.setSinkId === 'function') {
             audio.setSinkId(dom.speakerSelect.value).catch(e => {});
         }
         
-        audio.play().catch(err => console.error("Sistem sesi hatası:", err));
+        audio.play().catch(() => {});
     } catch (e) {
-        console.error("Ses dosyası bulunamadı:", e);
-    }
+        console.error(e);}
 }
+
+
 
 // --- YEREL EFEKT SESLERİ (Soundpad) ---
 function playLocalSound(effectName) {
     if (state.isDeafened) return;
     try {
-        const soundPath = path.join(__dirname, '..', 'assets', effectName);
+        const fileName = effectName.endsWith('.mp3') ? effectName : `${effectName}.mp3`;
+        const soundPath = getAssetPath(fileName);
+        
         const audio = new Audio(`file://${soundPath.replace(/\\/g, '/')}`);
         audio.volume = dom.masterSlider ? (dom.masterSlider.value / 100) : 1.0;
         
@@ -40,7 +59,7 @@ function playLocalSound(effectName) {
         }
 
         audio.play().catch(() => {});
-    } catch (e) { console.error(e); }
+    } catch (e) { }
 }
 
 // --- MİKROFONU BAŞLAT (Local Stream) ---
@@ -82,10 +101,8 @@ async function initLocalStream(deviceId = null) {
         gainNode.connect(destination);
 
         state.processedStream = destination.stream;
-        console.log(`✅ Mikrofon hazır. Gain: ${initialGain}`);
         return true;
     } catch (e) {
-        console.error("Mikrofon hatası:", e);
         alert("Mikrofon başlatılamadı!");
         return false;
     }
@@ -93,9 +110,6 @@ async function initLocalStream(deviceId = null) {
 
 // --- UZAK KULLANICI SESİNİ EKLE (DÜZELTİLMİŞ) ---
 function addAudioElement(id, stream) {
-    console.log(`🔊 ${id} için ses motoru hazırlanıyor...`);
-
-    // 1. Audio HTML Elementini Oluştur
     let audioEl = document.getElementById(`audio-${id}`);
     if (!audioEl) {
         audioEl = document.createElement('audio');
@@ -104,19 +118,12 @@ function addAudioElement(id, stream) {
         document.body.appendChild(audioEl);
     }
 
-    // ---------------------------------------------------------------------
-    // [ÇÖZÜM]: "ANCHOR" (ÇAPA) TAKTİĞİ
-    // WebRTC akışını canlı tutmak için gizli bir ses elementinde ham halini çalıyoruz.
-    // Bu olmadan "createMediaStreamSource" sessiz veri alır.
     const anchorAudio = document.createElement('audio');
     anchorAudio.srcObject = stream;
-    anchorAudio.muted = true; // Sadece veri akışı için, sesi buradan duymayacağız
-    anchorAudio.play().catch(e => console.warn("Anchor play hatası:", e));
-    // Anchor'u elemente iliştir ki garbage collector silmesin
+    anchorAudio.muted = true; 
+    anchorAudio.play().catch(() => {});
     audioEl._anchor = anchorAudio; 
-    // ---------------------------------------------------------------------
 
-    // 2. Çıkış AudioContext'ini Hazırla
     if (!state.outputAudioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         state.outputAudioContext = new AudioContext();
@@ -126,7 +133,6 @@ function addAudioElement(id, stream) {
         state.outputAudioContext.resume();
     }
 
-    // 3. Web Audio Zinciri (Ses Yükseltme/Gain İçin)
     try {
         const source = state.outputAudioContext.createMediaStreamSource(stream);
         const gainNode = state.outputAudioContext.createGain();
@@ -141,24 +147,16 @@ function addAudioElement(id, stream) {
         gainNode.gain.value = masterVol * peerVol;
         state.peerGainNodes[id] = gainNode;
 
-        // 4. İşlenmiş Sesi Audio Elementine Ver
         audioEl.srcObject = destination.stream;
-        audioEl.volume = 1.0; // Element hep %100, gain içeriden hallediyor
+        audioEl.volume = 1.0; 
 
-        // Hoparlör Seçimi
         if (dom.speakerSelect && dom.speakerSelect.value && typeof audioEl.setSinkId === 'function') {
-            audioEl.setSinkId(dom.speakerSelect.value)
-                .then(() => console.log(`🎧 Çıkış cihazı ayarlandı: ${id}`))
-                .catch(e => console.warn("SinkID hatası:", e));
+            audioEl.setSinkId(dom.speakerSelect.value).catch(() => {});
         }
 
-        audioEl.play()
-            .then(() => console.log(`✅ SES ÇALIYOR: ${id}`))
-            .catch(e => console.error(`❌ Oynatma hatası: ${id}`, e));
+        audioEl.play().catch(() => {});
 
     } catch (err) {
-        console.error("Web Audio Graph Hatası:", err);
-        // Hata olursa ham sesi ver
         audioEl.srcObject = stream;
         audioEl.play();
     }
@@ -168,7 +166,6 @@ function addAudioElement(id, stream) {
 function removeAudioElement(id) {
     const el = document.getElementById(`audio-${id}`);
     if (el) {
-        // Anchor'u temizle
         if (el._anchor) {
             el._anchor.srcObject = null;
             el._anchor = null;
@@ -184,12 +181,10 @@ function removeAudioElement(id) {
 // --- HOPARLÖR DEĞİŞTİRME ---
 async function setAudioOutputDevice(deviceId) {
     if (!deviceId) return;
-    console.log("🔄 Ses çıkışı değiştiriliyor ->", deviceId);
-
     const allAudios = document.querySelectorAll('audio');
     allAudios.forEach(audio => {
         if (typeof audio.setSinkId === 'function') {
-            audio.setSinkId(deviceId).catch(e => console.error(e));
+            audio.setSinkId(deviceId).catch(() => {});
         }
     });
 
@@ -209,8 +204,8 @@ function setMicState(muted) {
     }
 
     if (dom.btnToggleMic) {
-        dom.btnToggleMic.innerText = muted ? '🎤✖' : '🎤';
-        dom.btnToggleMic.style.backgroundColor = muted ? '#8b281d' : ''; // Kırmızı / Normal
+        dom.btnToggleMic.innerText = muted ? '❌' : '🎤';
+        dom.btnToggleMic.style.backgroundColor = muted ? '#ff4757' : ''; 
         dom.btnToggleMic.title = muted ? "Mikrofon Kapalı" : "Mikrofon Açık";
     }
 
@@ -222,32 +217,30 @@ function setMicState(muted) {
                 isMuted: muted
             });
         }
-    } catch (e) { console.warn("Mic status gönderilemedi:", e); }
+    } catch (e) { }
     
     const userList = require('../ui/userList');
     userList.updateMicStatusUI("me", muted);
 }
 
-
 // Hoparlörü kapatır/açar (Sağırlaştırma Modu)
-
 function toggleDeafen() {
     state.isDeafened = !state.isDeafened;
     const isDeaf = state.isDeafened;
 
     if (dom.btnToggleSound) {
         dom.btnToggleSound.innerText = isDeaf ? '🔇' : '🔊';
-        dom.btnToggleSound.style.backgroundColor = isDeaf ? '#8b281d' : ''; 
+        dom.btnToggleSound.style.backgroundColor = isDeaf ? '#ff4757' : ''; 
         dom.btnToggleSound.title = isDeaf ? "Ses Kapalı" : "Ses Açık";
     }
 
     const allAudios = document.querySelectorAll('audio');
     allAudios.forEach(audio => {
-        audio.muted = isDeaf;
+        audio.muted = isDeaf; 
     });
     
     if (isDeaf && !state.isMicMuted) {
-        setMicState(true);
+        setMicState(true); 
     }
 }
 
