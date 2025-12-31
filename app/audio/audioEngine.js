@@ -113,7 +113,7 @@ async function initLocalStream(deviceId = null) {
                 deviceId: deviceId ? { exact: deviceId } : undefined,
                 echoCancellation: true, // noise cancellation
                 noiseSuppression: true, // noise suppression
-                autoGainControl: false
+                autoGainControl: true
             },
             video: false
         });

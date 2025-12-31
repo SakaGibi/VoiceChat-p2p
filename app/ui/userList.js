@@ -45,7 +45,7 @@ function addUserUI(id, name, isConnected, avatar = null) {
     // Volume control for remote users
     let volHTML = id !== 'me' ? `
     <div class="user-volume-row">
-        <input type="range" min="0" max="300" value="100" id="vol-slider-${id}" class="peer-volume-slider">
+        <input type="range" min="0" max="500" value="100" id="vol-slider-${id}" class="peer-volume-slider">
         <span id="vol-val-${id}" class="vol-label">100%</span>
     </div>` : '<div style="height:12px;"></div>';
 
