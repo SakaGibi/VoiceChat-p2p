@@ -12,7 +12,7 @@ const dom = require('./dom');
 function addUserUI(id, name, isConnected, avatar = null) {
     let el = document.getElementById(`user-${id}`);
     const avatarSrc = avatar || 'assets/default-avatar.png';
-    
+
     // If card exists, update image and status, then exit
     if (el) {
         const imgEl = el.querySelector('.user-avatar-list');
@@ -21,23 +21,23 @@ function addUserUI(id, name, isConnected, avatar = null) {
         updateUserStatusUI(id, isConnected);
         return;
     }
-    
+
     // Initialize a new user card
-    el = document.createElement('div'); 
-    el.id = `user-${id}`; 
-    el.className = 'user-card'; 
-    
+    el = document.createElement('div');
+    el.id = `user-${id}`;
+    el.className = 'user-card';
+
     // Set initial data states
     el.dataset.isMuted = id === 'me' ? state.isMicMuted : 'false';
     el.dataset.isDeafened = id === 'me' ? state.isDeafened : 'false';
-    
+
     if (dom.userList) {
         dom.userList.appendChild(el);
     } else {
         console.error("ERROR: dom.userList reference not found!");
         return;
     }
-    
+
     // Define initial icons based on current state
     const initialMic = id === 'me' ? (state.isMicMuted ? '❌' : '🎤') : '🎤';
     const initialDeaf = id === 'me' ? (state.isDeafened ? '🔇' : '🔊') : '🔊';
@@ -47,14 +47,16 @@ function addUserUI(id, name, isConnected, avatar = null) {
     <div class="user-volume-row">
         <input type="range" min="0" max="300" value="100" id="vol-slider-${id}" class="peer-volume-slider">
         <span id="vol-val-${id}" class="vol-label">100%</span>
-    </div>` : '<div style="height:12px;"></div>'; 
-    
+    </div>` : '<div style="height:12px;"></div>';
+
     // Main Card Structure
     el.innerHTML = `
         <img src="${avatarSrc}" class="user-avatar-list">
         <div class="user-details">
             <div class="user-header">
-                <span class="user-name">${name}</span>
+                <div class="user-name-container user-name">
+                    <span class="user-name-text">${name}</span>
+                </div>
                 <div class="status-indicators">
                     <span id="mic-icon-${id}" class="status-icon">${initialMic}</span>
                     <span id="deaf-icon-${id}" class="status-icon">${initialDeaf}</span>
@@ -78,6 +80,25 @@ function addUserUI(id, name, isConnected, avatar = null) {
         const slider = el.querySelector('.peer-volume-slider');
         slider.oninput = (e) => updatePeerVolume(id, e.target.value);
     }
+
+    // SCROLL CHECK: Check if name is too long
+    // We must wait for render or text availability. 
+    // Since we appended 'el' to DOM before setting innerHTML (wait, no, previous code did innerHTML THEN append? No.)
+    // Let's check logic:
+    // Code says: el = document.createElement... dom.userList.appendChild(el)... el.innerHTML = ...
+    // So it IS in the DOM. We can check immediately.
+    setTimeout(() => {
+        const nameContainer = el.querySelector('.user-name-container');
+        const nameText = el.querySelector('.user-name-text');
+        if (nameContainer && nameText) {
+            if (nameText.scrollWidth > nameContainer.clientWidth) {
+                nameContainer.classList.add('should-scroll');
+                // Adjust animation speed based on length? Optional.
+                const duration = Math.max(3, nameText.scrollWidth / 20); // roughly 20px per second
+                nameContainer.style.setProperty('--scroll-duration', duration + 's');
+            }
+        }
+    }, 0);
 
     // Check if user is already sharing screen
     if (state.activeRemoteStreams[id]) {
@@ -105,7 +126,7 @@ function updateUserIcon(id) {
     const micEl = document.getElementById(`mic-icon-${id}`);
     const deafEl = document.getElementById(`deaf-icon-${id}`);
     const card = document.getElementById(`user-${id}`);
-    
+
     if (!micEl || !deafEl || !card) return;
 
     const isMuted = card.dataset.isMuted === 'true';
@@ -126,7 +147,7 @@ function updateUserIcon(id) {
 
 //Triggered when microphone status changes.
 function updateMicStatusUI(id, isMuted) {
-    const el = document.getElementById(`user-${id}`); 
+    const el = document.getElementById(`user-${id}`);
     if (el) {
         el.dataset.isMuted = isMuted;
         updateUserIcon(id);
@@ -167,10 +188,10 @@ function updatePeerVolume(id, value) {
     if (gainNode && state.outputAudioContext) {
         const masterVol = dom.masterSlider ? (dom.masterSlider.value / 100) : 1;
         const peerVol = value / 100;
-        
+
         gainNode.gain.setTargetAtTime(
-            peerVol * masterVol, 
-            state.outputAudioContext.currentTime, 
+            peerVol * masterVol,
+            state.outputAudioContext.currentTime,
             0.01
         );
     }
@@ -183,13 +204,35 @@ window.updatePeerVolume = updatePeerVolume;
 function addVideoElement(id, stream) {
     state.activeRemoteStreams[id] = stream;
     const card = document.getElementById(`user-${id}`);
-    
+
     if (card && !card.querySelector('.stream-icon-btn')) {
-        const btn = document.createElement('button'); 
-        btn.className = 'stream-icon-btn'; 
+        const btn = document.createElement('button');
+        btn.className = 'stream-icon-btn';
         btn.innerHTML = '🖥️ WATCH';
         btn.onclick = () => openStreamModal(id);
-        card.appendChild(btn);
+
+        const header = card.querySelector('.user-header');
+        const nameEl = header ? header.querySelector('.user-name') : null;
+
+        if (header && nameEl) {
+            let wrapper = nameEl.parentNode;
+            if (!wrapper.classList.contains('name-btn-wrapper')) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'name-btn-wrapper';
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+
+                nameEl.parentNode.insertBefore(wrapper, nameEl);
+                wrapper.appendChild(nameEl);
+            }
+
+            btn.style.marginLeft = '8px';
+            btn.style.marginRight = '0';
+
+            wrapper.appendChild(btn);
+        } else {
+            card.appendChild(btn);
+        }
     }
 
     if (stream.getVideoTracks().length > 0) {
@@ -200,43 +243,92 @@ function addVideoElement(id, stream) {
 //Removes video button and closes modal if active.
 function removeVideoElement(id) {
     delete state.activeRemoteStreams[id];
-    const card = document.getElementById(`user-${id}`); 
-    if (card) { 
-        const btn = card.querySelector('.stream-icon-btn'); 
+    const card = document.getElementById(`user-${id}`);
+    if (card) {
+        const btn = card.querySelector('.stream-icon-btn');
         if (btn) btn.remove();
     }
-    
+
     const streamerLabel = document.getElementById('streamerName');
 
-    if (dom.streamModal && dom.streamModal.style.display !== 'none' && 
+    // Close the popup window if it exists
+    if (state.activeStreamWindows && state.activeStreamWindows[id]) {
+        try {
+            state.activeStreamWindows[id].close();
+        } catch (e) {
+            console.error("Pencere kapatılamadı:", e);
+        }
+        delete state.activeStreamWindows[id];
+    }
+
+    if (dom.streamModal && dom.streamModal.style.display !== 'none' &&
         streamerLabel && streamerLabel.getAttribute('data-id') === id) {
-        
+
         dom.streamModal.style.display = 'none';
         if (dom.largeVideoPlayer) dom.largeVideoPlayer.srcObject = null;
     }
 }
 
 //Opens the stream watch window (Modal).
+//Opens the stream watch window (Popup).
 function openStreamModal(id) {
     if (!state.activeRemoteStreams[id]) return alert("No active stream found.");
-    
-    const streamerLabel = document.getElementById('streamerName');
 
-    if (dom.largeVideoPlayer) dom.largeVideoPlayer.srcObject = state.activeRemoteStreams[id];
-    
-    if (streamerLabel) {
-        streamerLabel.innerText = `${state.userNames[id] || 'User'}'s Screen`;
-        streamerLabel.setAttribute('data-id', id);
+    // Check if window is already open
+    if (state.activeStreamWindows && state.activeStreamWindows[id] && !state.activeStreamWindows[id].closed) {
+        state.activeStreamWindows[id].focus();
+        return;
     }
-    
-    if (dom.streamModal) dom.streamModal.style.display = 'flex';
+
+    const userName = state.userNames[id] || 'Kullanıcı';
+    const width = 1200;
+    const height = 800;
+
+    // Open new popup window
+    // Note: We use a relative path. Since index.html is in 'app/', video_player.html should also be in 'app/'
+    const streamWindow = window.open('video_player.html', `NatlaLive-${id}`, `width=${width},height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no`);
+
+    if (!streamWindow) {
+        return alert("Pencere açılamadı! Lütfen izin verin.");
+    }
+
+    // Save reference
+    if (!state.activeStreamWindows) state.activeStreamWindows = {};
+    state.activeStreamWindows[id] = streamWindow;
+
+    // Inject stream once loaded
+    streamWindow.onload = () => {
+        const vid = streamWindow.document.getElementById('remoteVideo');
+        const title = streamWindow.document.getElementById('pageTitle');
+
+        if (vid) {
+            vid.srcObject = state.activeRemoteStreams[id];
+            // Ensure audio output device preference is respected if possible, 
+            // though Electron popup might use default device.
+            // .setSinkId is not always supported in all contexts easily without secure context, 
+            // but Electron usually supports it.
+            // if (vid.setSinkId && localStorage.getItem('selectedSpeaker')) {
+            //     vid.setSinkId(localStorage.getItem('selectedSpeaker')).catch(e => console.error(e));
+            // }
+        }
+
+        if (title) {
+            title.innerText = `${userName} - Ekran Paylaşımı`;
+            streamWindow.document.title = `${userName} - Canlı`;
+        }
+
+        // Window close handler to clean up reference
+        streamWindow.onbeforeunload = () => {
+            delete state.activeStreamWindows[id];
+        };
+    };
 }
 
 // Removes the user card and related audio elements.
 function removeUserUI(id) {
     const el = document.getElementById(`user-${id}`);
     if (el) el.remove();
-    
+
     const audio = document.getElementById(`audio-${id}`);
     if (audio) audio.remove();
 }
