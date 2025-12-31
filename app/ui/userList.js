@@ -85,9 +85,9 @@ function addUserUI(id, name, isConnected, avatar = null) {
     }
 }
 
-/**
- * Updates the connection status label (Live / Connecting...)
- */
+
+// Updates the connection status label (Live / Connecting...)
+
 function updateUserStatusUI(id, isConnected) {
     const el = document.getElementById(`user-${id}`);
     if (!el) return;
@@ -99,10 +99,8 @@ function updateUserStatusUI(id, isConnected) {
     }
 }
 
-/**
- * Updates status icons based on card datasets.
- * Shows only one icon (🔇) when deafened to prevent clutter.
- */
+// Updates status icons based on card datasets.
+// Shows only one icon (🔇) when deafened to prevent clutter.
 function updateUserIcon(id) {
     const micEl = document.getElementById(`mic-icon-${id}`);
     const deafEl = document.getElementById(`deaf-icon-${id}`);
@@ -126,9 +124,7 @@ function updateUserIcon(id) {
     }
 }
 
-/**
- * Triggered when microphone status changes.
- */
+//Triggered when microphone status changes.
 function updateMicStatusUI(id, isMuted) {
     const el = document.getElementById(`user-${id}`); 
     if (el) {
@@ -137,9 +133,9 @@ function updateMicStatusUI(id, isMuted) {
     }
 }
 
-/**
- * Triggered when deafen/speaker status changes.
- */
+
+// Triggered when deafen/speaker status changes.
+
 function updateDeafenStatusUI(id, isDeafened) {
     const el = document.getElementById(`user-${id}`);
     if (el) {
@@ -148,9 +144,9 @@ function updateDeafenStatusUI(id, isDeafened) {
     }
 }
 
-/**
- * Updates volume for a specific peer and adjusts GainNode.
- */
+
+// Updates volume for a specific peer and adjusts GainNode.
+
 function updatePeerVolume(id, value) {
     if (!state.peerVolumes) state.peerVolumes = {};
     state.peerVolumes[id] = value;
@@ -158,6 +154,13 @@ function updatePeerVolume(id, value) {
     // Update UI text
     const textEl = document.getElementById(`vol-val-${id}`);
     if (textEl) textEl.innerText = value + "%";
+
+    // slider blue
+    const sliderEl = document.getElementById(`vol-slider-${id}`);
+    if (sliderEl) {
+        const percentage = (value / sliderEl.max) * 100;
+        sliderEl.style.setProperty('--val', percentage + '%');
+    }
 
     // Handle GainNode volume boost
     const gainNode = state.peerGainNodes[id];
@@ -176,9 +179,7 @@ function updatePeerVolume(id, value) {
 // Expose to window for HTML access
 window.updatePeerVolume = updatePeerVolume;
 
-/**
- * Adds 'WATCH' button to user card when screen sharing starts.
- */
+//Adds 'WATCH' button to user card when screen sharing starts.
 function addVideoElement(id, stream) {
     state.activeRemoteStreams[id] = stream;
     const card = document.getElementById(`user-${id}`);
@@ -196,9 +197,7 @@ function addVideoElement(id, stream) {
     }
 }
 
-/**
- * Removes video button and closes modal if active.
- */
+//Removes video button and closes modal if active.
 function removeVideoElement(id) {
     delete state.activeRemoteStreams[id];
     const card = document.getElementById(`user-${id}`); 
@@ -217,9 +216,7 @@ function removeVideoElement(id) {
     }
 }
 
-/**
- * Opens the stream watch window (Modal).
- */
+//Opens the stream watch window (Modal).
 function openStreamModal(id) {
     if (!state.activeRemoteStreams[id]) return alert("No active stream found.");
     
@@ -235,9 +232,7 @@ function openStreamModal(id) {
     if (dom.streamModal) dom.streamModal.style.display = 'flex';
 }
 
-/**
- * Removes the user card and related audio elements.
- */
+// Removes the user card and related audio elements.
 function removeUserUI(id) {
     const el = document.getElementById(`user-${id}`);
     if (el) el.remove();

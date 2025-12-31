@@ -1,5 +1,6 @@
-/* --- VARIABLES & THEME --- */
-
+/* =========================================
+   1. VARIABLES & THEME
+   ========================================= */
 :root {
     --bg-body: #121212;
     --bg-sidebar: #1e1e1e;
@@ -47,7 +48,9 @@ body.light-theme {
     --user-connecting: #fff3e0;
 }
 
-/* --- Main Layout --- */
+/* =========================================
+   2. MAIN LAYOUT & RESET
+   ========================================= */
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
     margin: 0; padding: 0;
@@ -58,7 +61,7 @@ body {
     display: flex; 
 }
 
-/* --- SIDEBAR --- */
+/* Sidebar Container */
 .sidebar {
     width: 350px; 
     background: var(--bg-sidebar);
@@ -71,88 +74,19 @@ body {
     height: 100%;
 }
 
-/* --- CHAT COMPONENTS --- */
-.chat-area {
-    flex: 1; 
-    background: var(--bg-chat);
-    display: flex;
-    flex-direction: column;
+/* =========================================
+   3. HEADER & CONTROLS (SIDEBAR TOP)
+   ========================================= */
+.header-row { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    flex-shrink: 0; 
 }
 
-/* Chat Message History */
-#chatHistory {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Chat Input */
-.chat-input-container {
-    padding: 10px;
-    background: var(--bg-sidebar); 
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-#msgInput { flex: 1; padding: 8px; border-radius: 16px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; }
-#btnSend { 
-    width: 38px;
-    height: 30px;
-    padding: 0;
-    font-size: 20px;
-    flex: none;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
-    background: var(--btn-primary); 
-    color: white; 
-    border: none; 
-    cursor: pointer;
-    border-radius: 16px; 
-}
-
-#btnAttach{ 
-    width: 38px;
-    height: 30px;
-    padding: 0;
-    font-size: 20px;
-    flex: none;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
-    background: #397251; 
-    color: white; 
-    border: none; 
-    cursor: pointer;
-    border-radius: 16px; 
-}
-
-/* --- MESSAGE BUBBLES --- */
-.message {
-    max-width: 85%;
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-size: 13px;
-    word-wrap: break-word;
-}
-.message.sent { align-self: flex-end; background: var(--msg-sent); color: white; border-bottom-right-radius: 2px; }
-.message.received { align-self: flex-start; background: var(--msg-received); color: var(--text-main); border-bottom-left-radius: 2px; }
-.msg-sender { font-size: 10px; opacity: 0.7; margin-bottom: 2px; display: block; }
-.msg-time { font-size: 10px; opacity: 0.5; float: right; margin-left: 5px; margin-top: 5px; }
-
-
-/* --- HEADER & CONTROLS --- */
-.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
 h1 { margin: 0; font-size: 20px; }
+
 #btnSettings { 
     flex: none; 
     width: 32px; 
@@ -175,29 +109,35 @@ h1 { margin: 0; font-size: 20px; }
     background: var(--input-bg);
 }
 
-#btnCloseSettings:hover {
-    color: white !important;
-}
+body.light-theme #btnSettings { color: #333; }
 
-body.light-theme #btnSettings {
-    color: #333;
-}
-#status { padding: 8px; margin-bottom: 10px; border-radius: 6px; background: var(--status-bg); color: var(--status-text); font-size: 13px; font-weight: 600; text-align: center; flex-shrink: 0; }
-
-
-/* --- JOIN ROW & INPUTS --- */
-.join-row {
+/* Status Bar & Name Input */
+.status-name-row {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 10px;
-    height: 40px; 
-    width: 100%;
-    flex-shrink: 0;
+    padding: 5px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
 }
 
-/* Name Input */
+/* Avatar near input */
+.my-avatar-btn {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+    border: 1px solid var(--btn-primary);
+    margin-right: 5px;
+    transition: transform 0.2s;
+}
+.my-avatar-btn:hover { transform: scale(1.1); }
+
+/* Compact Inputs */
 .compact-input {
-    flex: 0 0 110px;
     width: 110px;
     padding: 0 5px;
     border-radius: 6px;
@@ -209,7 +149,30 @@ body.light-theme #btnSettings {
     font-weight: 600;
 }
 
-/* Join Button */
+#username { width: 120px; height: 28px; font-size: 13px; }
+
+/* =========================================
+   4. JOIN & CONNECTION CONTROLS
+   ========================================= */
+.join-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    height: 40px; 
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.fixed-room-select {
+    width: 150px;
+    flex-shrink: 0;
+    cursor: pointer;
+    background: var(--input-bg);
+    color: var(--text-main);
+    border: 1px solid var(--input-border);
+}
+
+/* Buttons */
 #btnConnect {
     flex: 1;
     background: #113976;
@@ -246,84 +209,67 @@ body.light-theme #btnSettings {
     font-family: sans-serif;
 }
 
-/* button colors */
-#btnToggleMic, #btnToggleSound { 
-    background-color: #397251; 
-}
-#btnToggleMic:hover, #btnToggleSound:hover { 
-    background-color: #264b31; 
-    opacity: 1;
-}
+#btnToggleMic, #btnToggleSound { background-color: #397251; }
+#btnToggleMic:hover, #btnToggleSound:hover { background-color: #264b31; opacity: 1; }
 
-#btnToggleMic.btn-closed, #btnToggleSound.btn-closed {
-    background-color: #8b281d;
-}
+#btnToggleMic.btn-closed, #btnToggleSound.btn-closed { background-color: #8b281d; }
+#btnToggleMic.btn-closed:hover, #btnToggleSound.btn-closed:hover { background-color: #5b130d; opacity: 1; }
 
-#btnToggleMic.btn-closed:hover, #btnToggleSound.btn-closed:hover {
-    background-color: #5b130d;
-    opacity: 1;
-}
+#btnDisconnect { background-color: #8b281d; font-weight: 900; }
+#btnDisconnect:hover { background-color: #5b130d; }
 
-#btnDisconnect { 
-    background-color: #8b281d;
-    font-weight: 900;
+/* =========================================
+   5. SETTINGS PANEL
+   ========================================= */
+#settingsPanel { 
+    background: var(--input-bg); 
+    border: 1px solid var(--border-color); 
+    padding: 10px; 
+    border-radius: 8px; 
+    margin-bottom: 10px; 
+    flex-shrink: 0; 
 }
 
-#btnToggleMic:hover, #btnToggleSound:hover { opacity: 0.9; }
+.slider-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; justify-content: space-between; width: 100%; }
+.slider-group label { font-size: 14px; font-weight: bold; width: 100px; color: var(--text-main); flex-shrink: 0; }
+.slider-group input { flex: 1; cursor: pointer; }
+.slider-val { font-size: 12px; width: 35px; text-align: right; font-family: monospace; color: var(--text-muted); }
+.device-select { flex: 1 1 auto; padding: 5px; font-size: 14px; border-radius: 4px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-#btnDisconnect:hover { 
-    background-color: #5b130d;
+/* =========================================
+   6. USERS & SOUNDPAD CONTAINER (FIXED SCROLL)
+   ========================================= */
+#users { 
+    flex: 1; 
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    overflow-y: hidden;     /* Prevent outer container scroll */
+    margin-top: 5px; 
+    border-top: 1px solid var(--border-color); 
+    padding-top: 10px; 
+    min-height: 0;          /* Crucial for flex nested scrolling */
 }
 
-
-/* --- SETTINGS & USERS --- */
-/* Settings */
-#settingsPanel { background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-shrink: 0; }
-.slider-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.slider-group label { font-size: 12px; width: 60px; flex-shrink: 0; }
-.device-select { flex: 1 1 auto; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* User List */
-#users { flex: 1; overflow-y: auto; margin-top: 5px; border-top: 1px solid var(--border-color); padding-top: 10px; }
-.user-status {
-    font-size: 12px;
-    font-weight: bold;
-    color: #2ecc71;
-    text-shadow: 0 0 5px rgba(46, 204, 113, 0.4);
-}
-.user-info { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
-.meter-bg { width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; }
-.meter-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.05s; }
-
-/* --- SCROLLBARS --- */
-#users::-webkit-scrollbar, #chatHistory::-webkit-scrollbar { width: 6px; }
-#users::-webkit-scrollbar-thumb, #chatHistory::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-#users::-webkit-scrollbar-thumb:hover, #chatHistory::-webkit-scrollbar-thumb:hover { background: #777; }
-
-
-/* --- SOUNDPAD --- */
+/* Soundpad Area */
 #soundpadArea {
+    flex-shrink: 0; /* Never shrink, stay at top */
     display: flex; 
     flex-wrap: wrap; 
     gap: 3px; 
     padding: 5px; 
-    margin: 10px 0;
+    margin: 0 0 10px 0;
     border: none; 
     background-color: var(--input-bg);
     border-radius: 8px;
 }
 
 .soundpad-btn {
-    /* 8 Buton Sığdırma Hesabı */
-    flex: 1 1 calc(12.5% - 3px); 
+    flex: 1 1 calc(12.5% - 3px); /* 8 buttons per row */
     min-width: 30px; 
     max-width: 100%;
     height: 30px; 
-    
-    /* ESKİ KOYU MOR RENGİNE DÖNÜŞ */
     background-color: #28205b; 
     color: white;
-    
     font-size: 10px; 
     font-weight: bold;
     border: 1px solid rgba(0,0,0,0.2); 
@@ -334,24 +280,13 @@ body.light-theme #btnSettings {
     display: flex;
     justify-content: center;
     align-items: center;
-    
     text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-.soundpad-btn:hover { 
-    background-color: #0f1038; 
-    transform: translateY(-1px); 
-    box-shadow: 0 2px 5px rgba(72, 52, 212, 0.4); 
-}
+.soundpad-btn:hover { background-color: #0f1038; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(72, 52, 212, 0.4); }
+.soundpad-btn:active { transform: translateY(0); background-color: #30336b; box-shadow: none; }
 
-.soundpad-btn:active { 
-    transform: translateY(0); 
-    background-color: #30336b; 
-    box-shadow: none; 
-}
-
-/* --- SCREEN SHARE --- */
-/* --- EKRAN PAYLAŞMA BUTONU & BAŞLIK DÜZENİ --- */
+/* User List Header & Scroll Area */
 .user-list-header {
     display: flex;
     justify-content: space-between;
@@ -359,14 +294,130 @@ body.light-theme #btnSettings {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 5px;
     margin-bottom: 5px;
+    flex-shrink: 0;
 }
 
-.user-list-header h3 {
+.user-list-header h3 { margin: 0; font-size: 16px; color: var(--text-main); }
+
+#userList { 
+    flex: 1; 
+    overflow-y: auto;   /* ONLY this area scrolls */
+    padding-right: 4px; /* Space for scrollbar */
+}
+
+/* =========================================
+   7. USER CARD DESIGN (MODERN)
+   ========================================= */
+.user-card {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    height: 75px; 
+    overflow: hidden;
+}
+
+/* Left: Large Avatar */
+.user-avatar-list {
+    width: 75px;
+    height: 75px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+}
+
+/* Right: Details */
+.user-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    height: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Status Text & Indicators */
+.user-status {
+    font-size: 11px;
+    font-weight: bold;
+    color: #2ecc71; /* Default Live Color */
+    text-shadow: 0 0 5px rgba(46, 204, 113, 0.4);
+}
+
+.status-indicators {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+/* Centered Controls */
+.user-controls-centered {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.user-volume-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.peer-volume-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px !important;
+    background: linear-gradient(to right, var(--btn-primary) 0%, var(--btn-primary) var(--val, 33%), #444 var(--val, 33%), #444 100%);
+    border-radius: 2px;
+    outline: none;
+    flex: 1;
     margin: 0;
-    font-size: 16px;
-    color: var(--text-main);
 }
 
+.peer-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: var(--btn-primary);
+    cursor: pointer;
+}
+
+.vol-label {
+    font-size: 10px;
+    width: 32px;
+    text-align: right;
+    color: var(--text-muted);
+}
+
+.meter-bg {
+    height: 4px;
+    background: #111;
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.meter-fill { 
+    height: 100%; 
+    width: 0%; 
+    background: #2ecc71; 
+    transition: width 0.05s; 
+}
+
+/* Share Screen Button */
 #btnShareScreen {
     background-color: #0288d1;
     color: white;
@@ -381,77 +432,9 @@ body.light-theme #btnSettings {
     align-items: center;
     gap: 5px;
 }
+#btnShareScreen:hover:not(:disabled) { background-color: #039be5; }
+#btnShareScreen:disabled { background-color: #555; color: #aaa; cursor: not-allowed; opacity: 0.7; }
 
-#btnShareScreen:hover:not(:disabled) {
-    background-color: #039be5;
-}
-
-#btnShareScreen:disabled {
-    background-color: #555;
-    color: #aaa;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-/* --- STREAM MODAL --- */
-.stream-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.95);
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-}
-
-.stream-header {
-    height: 50px;
-    background-color: #1e1e1e;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    border-bottom: 1px solid #333;
-}
-
-.stream-header span {
-    color: white;
-    font-weight: bold;
-    font-size: 18px;
-}
-
-.stream-header button {
-    background-color: #c0392b;
-    color: white;
-    border: none;
-    padding: 5px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.stream-header button:hover {
-    background-color: #e74c3c;
-}
-
-.stream-content {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
-
-#largeVideoPlayer {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-
-/* --- MISC & PREVIEWS --- */
 .stream-icon-btn {
     background-color: #e74c3c;
     color: white;
@@ -470,17 +453,68 @@ body.light-theme #btnSettings {
     100% { opacity: 1; }
 }
 
-#roomSelect {
-    flex: 0 0 150px;
-    width: 160px;
+/* =========================================
+   8. CHAT AREA
+   ========================================= */
+.chat-area {
+    flex: 1; 
+    background: var(--bg-chat);
+    display: flex;
+    flex-direction: column;
 }
 
-#username {
-    width: 120px;
-    height: 28px;
+#chatHistory {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-input-container {
+    padding: 10px;
+    background: var(--bg-sidebar); 
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+#msgInput { flex: 1; padding: 8px; border-radius: 16px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; }
+
+#btnSend, #btnAttach { 
+    width: 38px;
+    height: 30px;
+    padding: 0;
+    font-size: 20px;
+    flex: none;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    color: white; 
+    border: none; 
+    cursor: pointer;
+    border-radius: 16px; 
+}
+#btnSend { background: var(--btn-primary); }
+#btnAttach { background: #397251; }
+
+.message {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
     font-size: 13px;
+    word-wrap: break-word;
 }
+.message.sent { align-self: flex-end; background: var(--msg-sent); color: white; border-bottom-right-radius: 2px; }
+.message.received { align-self: flex-start; background: var(--msg-received); color: var(--text-main); border-bottom-left-radius: 2px; }
+.msg-sender { font-size: 10px; opacity: 0.7; margin-bottom: 2px; display: block; }
+.msg-time { font-size: 10px; opacity: 0.5; float: right; margin-left: 5px; margin-top: 5px; }
 
+/* File Previews */
 .preview-container {
     margin: 8px 0;
     text-align: center;
@@ -489,7 +523,6 @@ body.light-theme #btnSettings {
     padding: 5px;
     display: none;
 }
-
 .preview-thumb {
     max-width: 100%;
     max-height: 200px;
@@ -498,145 +531,61 @@ body.light-theme #btnSettings {
     display: block;     
     margin: 0 auto;     
 }
+.file-info { margin-top: 5px; font-size: 13px; word-break: break-all; }
 
-.file-info {
-    margin-top: 5px;
-    font-size: 13px;
-    word-break: break-all;
-}
+/* =========================================
+   9. SCROLLBARS
+   ========================================= */
+#users::-webkit-scrollbar, 
+#chatHistory::-webkit-scrollbar,
+#userList::-webkit-scrollbar { width: 6px; }
 
-/* --- MOVED STYLES --- */
-.status-name-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    padding: 5px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 5px;
-    border: 1px solid var(--border-color);
-}
+#users::-webkit-scrollbar-thumb, 
+#chatHistory::-webkit-scrollbar-thumb,
+#userList::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 
-.fixed-room-select {
-    width: 190px;
-    flex-shrink: 0;
-    cursor: pointer;
-    background: var(--input-bg);
-    color: var(--text-main);
-    border: 1px solid var(--input-border);
-}
+#users::-webkit-scrollbar-thumb:hover, 
+#chatHistory::-webkit-scrollbar-thumb:hover,
+#userList::-webkit-scrollbar-thumb:hover { background: #777; }
 
-.fixed-join-btn {
-    width: 90px;
-    flex-shrink: 0;
-}
-
-/* Other Styles (Overrides) */
-.slider-group { justify-content: space-between; margin-bottom: 5px; width: 100%; }
-.slider-group label { font-size: 14px; font-weight: bold; width: 100px; color: var(--text-main); }
-.slider-group input { flex: 1; cursor: pointer; }
-.slider-val { font-size: 12px; width: 35px; text-align: right; font-family: monospace; color: var(--text-muted); }
-.device-select { flex: 1; padding: 5px; border-radius: 4px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); outline: none; max-width: 100%; font-size: 14px; }
-
-/* Kullanıcı kartındaki avatar */
-.user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-right: 8px;
-    border: 1px solid var(--border-color);
-}
-
-/* Giriş ekranındaki (ismin yanındaki) avatar */
-.my-avatar-btn {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    object-fit: cover;
-    cursor: pointer;
-    border: 1px solid var(--btn-primary);
-    margin-right: 5px;
-    transition: transform 0.2s;
-}
-
-.my-avatar-btn:hover {
-    transform: scale(1.1);
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-}
-
-.user-card {
-    display: flex;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    height: 75px; /* Slightly taller for the new layout */
-    overflow: hidden;
-}
-
-/* Fixed Avatar on the Left */
-.user-avatar-list {
-    width: 75px;
-    height: 75px;
-    object-fit: cover;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border-color);
-}
-
-/* Detail Section (Right Side) */
-.user-details {
-    flex: 1;
+/* =========================================
+   10. MODALS
+   ========================================= */
+/* Stream Modal */
+.stream-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
     display: flex;
     flex-direction: column;
-    padding: 8px 12px;
-    height: 100%;
-    min-width: 0;
-    box-sizing: border-box;
 }
 
-.user-header {
+.stream-header {
+    height: 50px;
+    background-color: #1e1e1e;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid #333;
 }
+.stream-header span { color: white; font-weight: bold; font-size: 18px; }
+.stream-header button { background-color: #c0392b; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.stream-header button:hover { background-color: #e74c3c; }
 
-/* This centers the bars vertically in the details area */
-.user-controls-centered {
+.stream-content {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    justify-content: center; /* Moves the bars up towards the center */
-    gap: 6px; /* Space between slider and VU meter */
-}
-
-.user-volume-row {
-    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
+    padding: 20px;
 }
 
-.peer-volume-slider {
-    height: 12px !important;
-    flex: 1;
-    margin: 0;
-}
-
-.vol-label {
-    font-size: 10px;
-    width: 32px;
-    text-align: right;
-    color: var(--text-muted);
-}
-
-.meter-bg {
-    height: 4px; /* Slim VU meter */
-    background: #111;
-    border-radius: 2px;
-    overflow: hidden;
+#largeVideoPlayer {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
