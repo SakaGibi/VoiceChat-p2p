@@ -51,7 +51,12 @@ function addUserUI(id, name, isConnected, avatar = null) {
 
     // Main Card Structure
     el.innerHTML = `
-        <img src="${avatarSrc}" class="user-avatar-list">
+        <div class="avatar-wrapper" style="position: relative; width: 75px; height: 75px; flex-shrink:0;">
+            <img src="${avatarSrc}" class="user-avatar-list" style="width: 100%; height: 100%; border:none;">
+            <div class="poke-overlay" data-id="${id}">
+                <span>👉🏻</span>
+            </div>
+        </div>
         <div class="user-details">
             <div class="user-header">
                 <div class="user-name-container user-name">
@@ -78,7 +83,19 @@ function addUserUI(id, name, isConnected, avatar = null) {
     // Initialize volume slider listener for peers
     if (id !== 'me') {
         const slider = el.querySelector('.peer-volume-slider');
-        slider.oninput = (e) => updatePeerVolume(id, e.target.value);
+        if (slider) slider.oninput = (e) => updatePeerVolume(id, e.target.value);
+
+        // Poke Click Handler
+        const pokeOverlay = el.querySelector('.poke-overlay');
+        if (pokeOverlay) {
+            pokeOverlay.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent card click if any
+                const targetId = pokeOverlay.getAttribute('data-id');
+                // Lazy require to avoid circular dependency with socketService
+                const socketService = require('../socket/socketService');
+                socketService.sendPoke(targetId);
+            });
+        }
     }
 
     // SCROLL CHECK: Check if name is too long

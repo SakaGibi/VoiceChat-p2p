@@ -172,6 +172,30 @@ function handleMessage(data) {
             userList.removeVideoElement(data.senderId);
             break;
 
+        case 'poke':
+            // Only the target triggers a notification
+            if (data.targetId === state.myPeerId) {
+                const senderName = state.userNames[data.senderId] || "Biri";
+                audioEngine.playSystemSound('notification'); // Or a specific poke sound if we had one
+
+                // System Notification
+                if (Notification.permission === "granted") {
+                    new Notification("Dikkat!", {
+                        body: `${senderName} seni dürttü`,
+                        icon: 'assets/gazmaliyim.ico' // or default
+                    });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            new Notification("Dikkat!", {
+                                body: `${senderName} seni dürttü`
+                            });
+                        }
+                    });
+                }
+            }
+            break;
+
         default:
             console.warn("⚠️ Bilinmeyen Mesaj Tipi:", data.type);
             break;
@@ -261,9 +285,18 @@ function cleanupAllPeers() {
     }
 }
 
+// Send Poke
+function sendPoke(targetId) {
+    send({
+        type: 'poke',
+        targetId: targetId
+    });
+}
+
 module.exports = {
     connect,
     joinRoom,
     send,
-    cleanupAllPeers
+    cleanupAllPeers,
+    sendPoke
 };
