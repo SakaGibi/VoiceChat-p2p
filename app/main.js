@@ -130,13 +130,13 @@ app.whenReady().then(() => {
 
   globalShortcut.register('Ctrl+Shift+N', () => {
     if (mainWindow) {
-      if (!isMicMuted) {
-        mainWindow.webContents.send('toggle-deafen');
-      } else {
+      if (isDeafened && isMicMuted) {
         mainWindow.webContents.send('toggle-deafen');
         setTimeout(() => {
           mainWindow.webContents.send('toggle-mic');
         }, 25);
+      } else {
+        mainWindow.webContents.send('toggle-deafen');
       }
     } else {
       console.warn('[Main] No mainWindow to send to.');
