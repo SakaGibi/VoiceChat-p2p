@@ -193,13 +193,19 @@ dom.btnConnect.addEventListener('click', async () => {
 
         socketService.joinRoom(name, state.currentRoom, state.myAvatar);
 
-        setTimeout(() => {
-            audioEngine.setMicState(state.isMicMuted);
-            if (state.isDeafened) {
-                socketService.send({ type: 'mic-status', isMuted: true });
-            }
-        }, 500);
+
     }
+});
+
+// --- IPC EVENTS FROM MAIN ---
+ipcRenderer.on('toggle-mic', () => {
+    if (!state.isConnected) return;
+    audioEngine.setMicState(!state.isMicMuted);
+});
+
+ipcRenderer.on('toggle-deafen', () => {
+    if (!state.isConnected) return;
+    audioEngine.toggleDeafen();
 });
 
 // --- OTHER EVENTS ---

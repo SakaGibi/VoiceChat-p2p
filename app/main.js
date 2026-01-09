@@ -1,5 +1,5 @@
 // main.js - Electron Main Process
-const { app, BrowserWindow, session, desktopCapturer, ipcMain } = require('electron');
+const { app, BrowserWindow, session, desktopCapturer, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
@@ -13,6 +13,13 @@ autoUpdater.autoDownload = false;
 autoUpdater.forceDevUpdateConfig = true;
 autoUpdater.allowDowngrade = true;
 let mainWindow;
+let isMicMuted = false;
+let isDeafened = false;
+
+// Set App ID for Windows Notifications
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.natla.app');
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -61,6 +68,14 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+ipcMain.on('sync-mic-state', (event, muted) => {
+  isMicMuted = muted;
+});
+
+ipcMain.on('sync-deafen-state', (event, deafened) => {
+  isDeafened = deafened;
+});
+
 // AutoUpdater Events: Sending Info to Renderer
 
 autoUpdater.on('checking-for-update', () => {
@@ -103,9 +118,38 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
+  // Global Shortcuts
+  globalShortcut.register('Ctrl+Shift+M', () => {
+    if (isDeafened) {
+      console.log('[Main] Ignored Ctrl+Shift+M: Speaker is closed (Deafened).');
+    } else {
+      if (mainWindow) mainWindow.webContents.send('toggle-mic');
+      else console.warn('[Main] No mainWindow to send to.');
+    }
+  });
+
+  globalShortcut.register('Ctrl+Shift+N', () => {
+    if (mainWindow) {
+      if (!isMicMuted) {
+        mainWindow.webContents.send('toggle-deafen');
+      } else {
+        mainWindow.webContents.send('toggle-deafen');
+        setTimeout(() => {
+          mainWindow.webContents.send('toggle-mic');
+        }, 25);
+      }
+    } else {
+      console.warn('[Main] No mainWindow to send to.');
+    }
+  });
+
   setTimeout(() => {
     autoUpdater.checkForUpdates();
   }, 3000);
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

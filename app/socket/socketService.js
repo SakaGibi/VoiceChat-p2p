@@ -173,16 +173,18 @@ function handleMessage(data) {
             break;
 
         case 'poke':
-            // Only the target triggers a notification
-            if (data.targetId === state.myPeerId) {
+            console.log("Poke received:", data);
+            if (data.targetId == state.myPeerId) {
                 const senderName = state.userNames[data.senderId] || "Biri";
-                audioEngine.playSystemSound('notification'); // Or a specific poke sound if we had one
+                console.log("Poke successful from:", senderName);
+
+                audioEngine.playSystemSound('notification');
 
                 // System Notification
                 if (Notification.permission === "granted") {
                     new Notification("Dikkat!", {
                         body: `${senderName} seni dürttü`,
-                        icon: 'assets/gazmaliyim.ico' // or default
+                        icon: 'assets/gazmaliyim.ico'
                     });
                 } else if (Notification.permission !== "denied") {
                     Notification.requestPermission().then(permission => {

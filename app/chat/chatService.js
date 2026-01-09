@@ -19,9 +19,8 @@ function addMessageToUI(sender, text, type, time = null) {
     let displayName = sender || "Biri";
 
     if (type === 'sent') {
-        displayName = "Ben"; // Always show "Ben" for my own messages
+        displayName = "Ben";
     } else {
-        // For received messages, remove any " (Ben)" suffix that might have been sent
         displayName = displayName.replace(" (Ben)", "");
     }
 
@@ -37,7 +36,6 @@ function addMessageToUI(sender, text, type, time = null) {
 
     dom.chatHistory.appendChild(div);
 
-    // Scroll to bottom on new message
     dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
 }
 
@@ -45,18 +43,42 @@ function addMessageToUI(sender, text, type, time = null) {
 function sendChat() {
     const text = dom.msgInput.value.trim();
 
-    // Do nothing if empty or not connected
-    if (!text || !state.isConnected) return;
+    if (!text) return;
+
+    // --- COMMANDS ---
+    if (text.toLowerCase() === '/help') {
+        const helpText = `
+            <b>Komutlar:</b><br>
+            - <b>/help:</b> Yardım
+            <br>
+            - <b>/clear:</b> Mesaj Geçmişini Temizle
+            <br>
+            <b>Kısayollar:</b><br>
+            - <b>Ctrl+Shift+M:</b> Mikrofonu Aç/Kapat<br>
+            - <b>Ctrl+Shift+N:</b> Sağırlaştır/Duy<br>
+        `;
+        addMessageToUI("Yorick", helpText, 'received');
+        dom.msgInput.value = '';
+        return;
+    }
+    if (text.toLowerCase() === '/clear') {
+        const children = Array.from(dom.chatHistory.children);
+        for (let i = 1; i < children.length; i++) { // start from 1 to skip welcome message and help message
+            children[i].remove();
+        }
+        dom.msgInput.value = '';
+        return;
+    }
+
+    if (!state.isConnected) return;
 
     const myName = state.userNames['me'] || "Ben";
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     // 1. Add to own screen
-    // We pass 'myName' but since type is 'sent', UI will show "Ben" anyway (per previous fix)
     addMessageToUI(myName, text, 'sent', time);
 
     // 2. Prepare message payload
-    // [FIX]: Send CLEAN name so receivers don't see "Ben" appended or confused
     const cleanSenderName = myName.replace(" (Ben)", "");
 
     const payload = {

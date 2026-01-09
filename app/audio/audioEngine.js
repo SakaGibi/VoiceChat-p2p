@@ -2,6 +2,8 @@
 const path = require('path');
 const dom = require('../ui/dom');
 const state = require('../state/appState');
+const { ipcRenderer } = require('electron');
+
 
 // --- FILE PATH FINDER ---
 function getAssetPath(fileName) {
@@ -207,6 +209,7 @@ function setMicState(muted) {
             socketService.send(payload);
             peerService.broadcast(payload);
         }
+        ipcRenderer.send('sync-mic-state', muted);
     } catch (e) { }
     const userList = require('../ui/userList');
     userList.updateMicStatusUI("me", muted);
@@ -215,13 +218,20 @@ function setMicState(muted) {
 function toggleDeafen() {
     state.isDeafened = !state.isDeafened;
     const isDeaf = state.isDeafened;
+
     if (dom.btnToggleSound) {
         dom.btnToggleSound.innerText = isDeaf ? '🔇' : '🔊';
         dom.btnToggleSound.classList.toggle('btn-closed', isDeaf);
     }
+
     const allAudios = document.querySelectorAll('audio');
     allAudios.forEach(audio => { audio.muted = isDeaf; });
-    if (isDeaf && !state.isMicMuted) setMicState(true);
+
+    // Auto-mute if deafened. DO NOT auto-unmute (Manual action required).
+    if (isDeaf && !state.isMicMuted) {
+        setMicState(true);
+    }
+
     const userList = require('../ui/userList');
     userList.updateDeafenStatusUI("me", isDeaf);
     try {
@@ -232,10 +242,10 @@ function toggleDeafen() {
             socketService.send(payload);
             peerService.broadcast(payload);
         }
+        ipcRenderer.send('sync-deafen-state', isDeaf);
     } catch (e) { }
 }
 
-// Simple nudge function left as a utility if needed, but no longer used in loops
 function nudgeAllPeers() {
     if (!state.outputAudioContext || !state.peerGainNodes) return;
     if (state.outputAudioContext.state === 'suspended') state.outputAudioContext.resume();
