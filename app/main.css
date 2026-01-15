@@ -650,19 +650,12 @@ body.light-theme #btnSettings {
     justify-content: center;
 }
 
-#btnToggleCam:hover:not(:disabled) {
+#btnToggleCam:hover {
     background-color: #039be5;
 }
 
 #btnToggleCam.active-cam {
     background-color: #e74c3c !important;
-}
-
-#btnToggleCam:disabled {
-    background-color: #555;
-    color: #aaa;
-    cursor: not-allowed;
-    opacity: 0.7;
 }
 
 /* Share Screen Button */
@@ -929,10 +922,11 @@ body.light-theme #btnSettings {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-
+/* =========================================
+   11. MARQUEE USERNAME
+   ========================================= */
 .user-name-container {
     max-width: 110px;
-    /* Limit the visual width */
     overflow: hidden;
     white-space: nowrap;
     position: relative;

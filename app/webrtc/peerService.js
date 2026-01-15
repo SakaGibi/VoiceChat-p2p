@@ -22,8 +22,13 @@ function createPeer(targetId, name, initiator) {
         const peer = new SimplePeer({
             initiator: initiator,
             stream: state.processedStream,
-            trickle: false,
-            config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+            trickle: true,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
         });
 
         // Signaling
@@ -104,8 +109,18 @@ function createPeer(targetId, name, initiator) {
             }
         });
 
+        // Handle Clean Close
         peer.on('close', () => removePeer(targetId));
-        peer.on('error', err => { console.error(`Peer ${targetId} hatası:`, err); });
+
+        // Handle Errors (Connection Failed etc.)
+        peer.on('error', err => {
+            console.error(`Peer ${targetId} hatası:`, err);
+
+            if (state.peers[targetId]) {
+                chatService.addMessageToUI("Sistem", `${name} ile bağlantı koptu! (${err.message})`, 'system', new Date().toLocaleTimeString());
+                audioEngine.playSystemSound('leave');
+            }
+        });
 
         state.peers[targetId] = peer;
     } catch (e) {
